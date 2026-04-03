@@ -15,19 +15,19 @@ module DRO_SolidOps
 
     cmd_union = UI::Command.new('Union') { self.do_union }
     cmd_union.tooltip = 'Union — merge solids, preserve internal voids'
-    cmd_union.small_icon = File.join(icons_dir, 'union_24.png')
+    cmd_union.small_icon = File.join(icons_dir, 'union_16.png')
     cmd_union.large_icon = File.join(icons_dir, 'union_24.png')
     toolbar.add_item(cmd_union)
 
     cmd_subtract = UI::Command.new('Subtract') { self.do_subtract }
-    cmd_subtract.tooltip = 'Subtract — remove second solid from first'
-    cmd_subtract.small_icon = File.join(icons_dir, 'subtract_24.png')
+    cmd_subtract.tooltip = 'Subtract — click base, then tools to subtract'
+    cmd_subtract.small_icon = File.join(icons_dir, 'subtract_16.png')
     cmd_subtract.large_icon = File.join(icons_dir, 'subtract_24.png')
     toolbar.add_item(cmd_subtract)
 
     cmd_split = UI::Command.new('Split') { self.do_split }
     cmd_split.tooltip = 'Split — divide solids at intersections'
-    cmd_split.small_icon = File.join(icons_dir, 'split_24.png')
+    cmd_split.small_icon = File.join(icons_dir, 'split_16.png')
     cmd_split.large_icon = File.join(icons_dir, 'split_24.png')
     toolbar.add_item(cmd_split)
 
