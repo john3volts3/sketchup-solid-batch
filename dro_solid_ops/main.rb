@@ -69,19 +69,63 @@ module DRO_SolidOps
   end
 
   def self.do_subtract
-    solids = get_solids(2)
-    return unless solids
-    if solids.length != 2
-      UI.messagebox(
-        "Subtract requires exactly 2 solids.\n" \
-        "First selected = base, second = tool (subtracted).",
-        MB_OK
-      )
-      return
+    Sketchup.active_model.select_tool(SubtractTool.new)
+  end
+
+  # Multi-subtract tool:
+  # Click 1 = base solid (kept). Then click tools one by one,
+  # each is subtracted from the base. Escape or switch tool to stop.
+  class SubtractTool
+    def activate
+      @base = nil
+      Sketchup.status_text = 'Subtract: click the BASE solid (the one to keep)'
     end
-    result = BooleanOps.subtract(solids[0], solids[1], Sketchup.active_model)
-    Sketchup.active_model.selection.clear
-    Sketchup.active_model.selection.add(result) if result&.valid?
+
+    def pick_solid(x, y, view)
+      ph = view.pick_helper
+      ph.do_pick(x, y)
+      path = ph.path_at(0)
+      return nil unless path
+      # Find the top-level group/component in the pick path
+      path.each do |e|
+        return e if e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
+      end
+      nil
+    end
+
+    def onLButtonDown(_flags, x, y, view)
+      solid = pick_solid(x, y, view)
+      return unless solid
+
+      if @base.nil?
+        # Step 1: select the base
+        @base = solid
+        view.model.selection.clear
+        view.model.selection.add(@base)
+        Sketchup.status_text = 'Subtract: click solids to subtract (Escape to finish)'
+      else
+        # Step 2+: subtract this solid from the base
+        return if solid == @base
+        Sketchup.status_text = 'Subtracting...'
+        result = BooleanOps.subtract(@base, solid, view.model)
+        if result&.valid?
+          @base = result
+          view.model.selection.clear
+          view.model.selection.add(@base)
+          Sketchup.status_text = 'Subtract: click next solid to subtract (Escape to finish)'
+        else
+          Sketchup.status_text = 'Subtract failed — click another solid or Escape'
+        end
+      end
+    end
+
+    def deactivate(view)
+      Sketchup.status_text = ''
+    end
+
+    def onCancel(_reason, view)
+      view.model.select_tool(nil)
+    end
   end
 
   def self.do_split
