@@ -1,5 +1,13 @@
 # Journal des modifications — Solid Ops
 
+## Roadmap
+
+- **v1.0** (livrée 2026-04-03) — Port fidèle d'Eneroth Solid Tools. Union, Subtract (multi-clic), Split. Ruby pur, fonctionne sans SketchUp Pro. Performances O(n²) sur le ray casting.
+- **v2.0** (planifiée) — Optimisation Ruby : index spatial (bounding box pre-check, octree) pour `within?`, hash des plans pour `find_corresponding_faces`. Cible : 10-50x plus rapide sur modèles complexes (1000+ faces).
+- **v3.0** (planifiée) — Backend Python avec trimesh/CGAL pour les opérations booléennes. Le plugin Ruby exporte la géométrie, appelle un script Python, réimporte le résultat. Vitesse C++ native pour le calcul booléen.
+
+---
+
 ## Session du 2026-04-03
 
 - **dro_solid_ops.rb** — Création du loader principal (SketchupExtension, register_extension)
