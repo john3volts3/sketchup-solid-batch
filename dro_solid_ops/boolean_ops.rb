@@ -231,8 +231,8 @@ module DRO_SolidOps
     # Public operations
     # =================================================================
 
-    def self.union(solids, model)
-      model.start_operation('Solid Ops — Union', true)
+    def self.union(solids, model, wrap_operation: true)
+      model.start_operation('Solid Ops — Union', true) if wrap_operation
       begin
         puts "[Solid Ops] Union: #{solids.length} solids"
 
@@ -286,18 +286,18 @@ module DRO_SolidOps
         # Erase original modifiers
         solids[1..-1].each { |s| s.erase! if s.valid? }
 
-        model.commit_operation
+        model.commit_operation if wrap_operation
         target
       rescue => e
-        model.abort_operation
+        model.abort_operation if wrap_operation
         puts "[Solid Ops] Union error: #{e.message}"
         e.backtrace.first(10).each { |line| puts "  #{line}" }
         nil
       end
     end
 
-    def self.subtract(base, tool, model)
-      model.start_operation('Solid Ops — Subtract', true)
+    def self.subtract(base, tool, model, wrap_operation: true)
+      model.start_operation('Solid Ops — Subtract', true) if wrap_operation
       begin
         puts "[Solid Ops] Subtract"
 
@@ -344,10 +344,10 @@ module DRO_SolidOps
 
         puts "[Solid Ops]   result: #{target_ents.grep(Sketchup::Face).length} faces, solid=#{solid?(target)}"
 
-        model.commit_operation
+        model.commit_operation if wrap_operation
         target
       rescue => e
-        model.abort_operation
+        model.abort_operation if wrap_operation
         puts "[Solid Ops] Subtract error: #{e.message}"
         e.backtrace.first(10).each { |line| puts "  #{line}" }
         nil

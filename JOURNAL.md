@@ -8,6 +8,29 @@
 
 ---
 
+## Session du 2026-04-04
+
+### Nouvelles fonctionnalités : Combine All, Combine All PRO, Set Subtract Color
+
+- **dro_solid_ops/main.rb** — Ajout de 4 nouvelles commandes :
+  - `do_combine_all` : sélectionner N solides, sépare par couleur (union vs subtract), union d'abord puis subtracts séquentiels via moteur custom BooleanOps.
+  - `do_combine_all_pro(:union)` : idem mais utilise les méthodes natives Pro `group.union()` + `group.subtract()`. Détection auto si Pro disponible.
+  - `do_combine_all_pro(:outer_shell)` : idem mais utilise `group.outer_shell()` + `group.subtract()` natifs. Opération unique pour Ctrl+Z.
+  - `do_set_subtract_color` : capture la couleur du matériau de l'objet sélectionné et la sauvegarde via `Sketchup.write_default` (persistant entre sessions).
+  - Helpers : `subtract_color`, `save_subtract_color`, `color_match?`, `is_subtract_solid?`
+  - Menu Extensions > Solid Ops : 5 items + séparateur
+  - Toolbar : 4 nouveaux boutons avec icônes
+- **dro_solid_ops/boolean_ops.rb** — Ajout paramètre `wrap_operation:` (défaut `true`) à `union` et `subtract` pour permettre au caller de gérer l'opération undo lui-même.
+- **dro_solid_ops/icons/** — Nouvelles icônes 16+24px : combine, combine_pro_union, combine_pro_shell, setcolor
+- **dro_solid_ops/icons/union, subtract, split** — Icônes mises à jour avec symboles +, −, / en noir, alignés bas-gauche
+
+### Corrections Combine All PRO
+- Fix subtract natif : `tool.subtract(result)` au lieu de `result.subtract(tool)` — dans l'API native SketchUp, le receveur est l'outil (effacé), l'argument est la base (modifiée et retournée).
+- Ajout `model.selection.clear` entre chaque opération native (nécessaire pour le subtract natif).
+- Undo unifié : Combine All et Combine All PRO wrappés dans un seul `start_operation`/`commit_operation` → un seul Ctrl+Z annule toute l'opération.
+
+---
+
 ## Session du 2026-04-03
 
 - **dro_solid_ops.rb** — Création du loader principal (SketchupExtension, register_extension)
