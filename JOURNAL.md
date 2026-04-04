@@ -8,6 +8,21 @@
 
 ---
 
+## Session du 2026-04-04 (2)
+
+### Nettoyage — Suppression des fonctions non-Pro
+
+- **dro_solid_ops/main.rb** — Suppression des 4 fonctions non-Pro :
+  - Menu items et toolbar buttons : Union, Subtract, Split, Combine All
+  - Handlers : `do_union`, `do_subtract`, `SubtractTool` (classe entière), `do_split`, `do_combine_all`
+  - Suppression `require_relative 'boolean_ops'`
+  - Fonctions conservées : `do_combine_all_pro` (Union/Shell), `do_set_subtract_color`, helpers couleur, `get_solids`
+- **dro_solid_ops/boolean_ops.rb** — Fichier supprimé (moteur booléen custom plus utilisé, les fonctions PRO utilisent les méthodes natives SketchUp)
+- **dro_solid_ops/icons/** — Suppression icônes : union_16/24, subtract_16/24, split_16/24, combine_16/24. Conservées : combine_pro_union, combine_pro_shell, setcolor
+- **dro_solid_ops.rb** — Description mise à jour
+
+---
+
 ## Session du 2026-04-04
 
 ### v2.0.0 — Optimisation : Bounding Box + Octree spatial

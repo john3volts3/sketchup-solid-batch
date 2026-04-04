@@ -6,7 +6,7 @@ module DRO_SolidOps
   PLUGIN_NAME = 'Solid Ops'.freeze
 
   ext = SketchupExtension.new(PLUGIN_NAME, File.join('dro_solid_ops', 'main'))
-  ext.description = 'Boolean operations on solids: Union, Subtract, Split'
+  ext.description = 'Batch solid operations using native SketchUp Pro boolean tools'
   ext.version = '1.0.0'
   ext.creator = 'DRO'
   ext.copyright = '2026'
