@@ -2,9 +2,15 @@
 
 **Batch solid boolean operations using native SketchUp Pro tools.**
 
-*[Version francaise ci-dessous](#solid-ops--plugin-sketchup-pro-1)*
+*[Version francaise ci-dessous](#solid-batch--plugin-sketchup-pro)*
 
 ---
+
+## Demo
+
+https://github.com/user-attachments/assets/demo.mp4
+
+> *See [docs/demo.mp4](docs/demo.mp4) if the video doesn't play above.*
 
 ## Features
 
@@ -53,6 +59,10 @@ MIT License — see [LICENSE.md](LICENSE.md)
 # Solid Batch — Plugin SketchUp Pro
 
 **Operations booleennes par lot sur les solides, utilisant les outils natifs de SketchUp Pro.**
+
+## Demo
+
+> *Voir la video ci-dessus ou [docs/demo.mp4](docs/demo.mp4)*
 
 ## Fonctionnalites
 
