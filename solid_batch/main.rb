@@ -150,8 +150,6 @@ module SolidBatch
       if union_solids.length >= 2
         puts "[Solid Batch]   Phase 1: #{mode_label} #{union_solids.length} solids..."
         union_solids[1..-1].each_with_index do |other, i|
-          puts "[Solid Batch]     #{mode_label} step #{i + 1}..."
-          model.selection.clear
           result = result.send(mode, other)
           unless result&.valid?
             model.abort_operation
@@ -169,8 +167,6 @@ module SolidBatch
       if subtract_solids.any?
         puts "[Solid Batch]   Phase 2: Subtract #{subtract_solids.length} solids..."
         subtract_solids.each_with_index do |tool, i|
-          puts "[Solid Batch]     subtract step #{i + 1}/#{subtract_solids.length}..."
-          model.selection.clear
           result = tool.subtract(result)
           unless result&.valid?
             model.abort_operation
