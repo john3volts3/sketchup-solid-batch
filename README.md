@@ -8,9 +8,7 @@
 
 ## Demo
 
-https://github.com/user-attachments/assets/demo.mp4
-
-> *See [docs/demo.mp4](docs/demo.mp4) if the video doesn't play above.*
+[![Solid Batch Demo](https://img.youtube.com/vi/Zmjdbe_O_Cc/0.jpg)](https://youtu.be/Zmjdbe_O_Cc)
 
 ## Why Solid Batch?
 
@@ -66,7 +64,7 @@ MIT License — see [LICENSE.md](LICENSE.md)
 
 ## Demo
 
-> *Voir la video ci-dessus ou [docs/demo.mp4](docs/demo.mp4)*
+[![Solid Batch Demo](https://img.youtube.com/vi/Zmjdbe_O_Cc/0.jpg)](https://youtu.be/Zmjdbe_O_Cc)
 
 ## Pourquoi Solid Batch ?
 
