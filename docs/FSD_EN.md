@@ -42,7 +42,7 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 
 ### 4.2 Functional Requirements
 
-#### FR-01: Combine All PRO (Union)
+#### FR-01: Combine All (Union)
 
 | Field | Description |
 |-------|-------------|
@@ -53,7 +53,7 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | **Undo** | Entire operation reverts with a single Ctrl+Z |
 | **Error handling** | If any step fails, abort and revert; show error message with step number |
 
-#### FR-02: Combine All PRO (Shell)
+#### FR-02: Combine All (Shell)
 
 | Field | Description |
 |-------|-------------|
@@ -135,7 +135,7 @@ SolidBatch                  # Top-level namespace
 ### 5.3 Operation Flow
 
 ```
-User clicks "Combine All PRO (Union)" or "(Shell)"
+User clicks "Combine All (Union)" or "(Shell)"
   |
   v
 get_solids(2) — validate selection
@@ -188,16 +188,16 @@ The plugin uses the following SketchUp Pro Ruby API methods:
 ### 7.1 Menu
 
 Located at **Extensions > Solid Batch**:
-1. Combine All PRO (Union)
-2. Combine All PRO (Shell)
+1. Combine All (Union)
+2. Combine All (Shell)
 3. *(separator)*
 4. Set Subtract Color
 
 ### 7.2 Toolbar
 
 Named "Solid Batch", contains 3 buttons with 16px and 24px icon variants:
-1. Combine All PRO (Union)
-2. Combine All PRO (Shell)
+1. Combine All (Union)
+2. Combine All (Shell)
 3. Set Subtract Color
 
 ### 7.3 Messages
@@ -219,4 +219,4 @@ All user-facing messages use `UI.messagebox` with `MB_OK`. Error messages includ
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-04-03 | Initial release — custom boolean engine (union, subtract, split) |
-| 2.0.0 | 2026-04-04 | Removed custom engine. Added Combine All PRO (Union/Shell) using native Pro methods. Added Set Subtract Color. Removed Union, Subtract, Split individual operations. |
+| 2.0.0 | 2026-04-04 | Removed custom engine. Added Combine All (Union/Shell) using native Pro methods. Added Set Subtract Color. Removed Union, Subtract, Split individual operations. |

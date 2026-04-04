@@ -42,7 +42,7 @@ Solid Batch est un plugin SketchUp Pro qui permet d'effectuer des operations boo
 
 ### 4.2 Exigences fonctionnelles
 
-#### EF-01 : Combine All PRO (Union)
+#### EF-01 : Combine All (Union)
 
 | Champ | Description |
 |-------|-------------|
@@ -53,7 +53,7 @@ Solid Batch est un plugin SketchUp Pro qui permet d'effectuer des operations boo
 | **Annulation** | L'operation entiere est annulee par un seul Ctrl+Z |
 | **Gestion d'erreur** | Si une etape echoue, abandonner et annuler ; afficher un message d'erreur avec le numero d'etape |
 
-#### EF-02 : Combine All PRO (Shell)
+#### EF-02 : Combine All (Shell)
 
 | Champ | Description |
 |-------|-------------|
@@ -135,7 +135,7 @@ SolidBatch                  # Namespace principal
 ### 5.3 Flux d'operation
 
 ```
-L'utilisateur clique "Combine All PRO (Union)" ou "(Shell)"
+L'utilisateur clique "Combine All (Union)" ou "(Shell)"
   |
   v
 get_solids(2) — valider la selection
@@ -188,16 +188,16 @@ Le plugin utilise les methodes suivantes de l'API Ruby SketchUp Pro :
 ### 7.1 Menu
 
 Situe dans **Extensions > Solid Batch** :
-1. Combine All PRO (Union)
-2. Combine All PRO (Shell)
+1. Combine All (Union)
+2. Combine All (Shell)
 3. *(separateur)*
 4. Set Subtract Color
 
 ### 7.2 Barre d'outils
 
 Nommee "Solid Batch", contient 3 boutons avec des variantes d'icones 16px et 24px :
-1. Combine All PRO (Union)
-2. Combine All PRO (Shell)
+1. Combine All (Union)
+2. Combine All (Shell)
 3. Set Subtract Color
 
 ### 7.3 Messages
@@ -219,4 +219,4 @@ Tous les messages utilisateur utilisent `UI.messagebox` avec `MB_OK`. Les messag
 | Version | Date | Changements |
 |---------|------|-------------|
 | 1.0.0 | 2026-04-03 | Version initiale — moteur booleen custom (union, subtract, split) |
-| 2.0.0 | 2026-04-04 | Suppression du moteur custom. Ajout Combine All PRO (Union/Shell) utilisant les methodes natives Pro. Ajout Set Subtract Color. Suppression des operations individuelles Union, Subtract, Split. |
+| 2.0.0 | 2026-04-04 | Suppression du moteur custom. Ajout Combine All (Union/Shell) utilisant les methodes natives Pro. Ajout Set Subtract Color. Suppression des operations individuelles Union, Subtract, Split. |

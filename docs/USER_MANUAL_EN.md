@@ -13,7 +13,7 @@ The plugin provides three commands accessible via the **Extensions > Solid Batch
 
 ## Commands
 
-### Combine All PRO (Union)
+### Combine All (Union)
 
 Merges all selected solids into one, using native `union` for base solids and native `subtract` for color-marked tool solids.
 
@@ -27,9 +27,9 @@ Merges all selected solids into one, using native `union` for base solids and na
 
 **When to use:** When you want to merge solids while preserving internal voids (e.g., merging walls that have window openings).
 
-### Combine All PRO (Shell)
+### Combine All (Shell)
 
-Same workflow as Combine All PRO (Union), but uses `outer_shell` instead of `union` in Phase 1.
+Same workflow as Combine All (Union), but uses `outer_shell` instead of `union` in Phase 1.
 
 **Difference with Union:**
 - **Union** preserves internal geometry (voids, internal faces)
@@ -60,7 +60,7 @@ Registers a color to identify which solids should be subtracted during Combine A
 
 4. **Select everything** — Select all the solids you want to process (both bases and tools).
 
-5. **Run the operation** — Click **Combine All PRO (Union)** or **Combine All PRO (Shell)**.
+5. **Run the operation** — Click **Combine All (Union)** or **Combine All (Shell)**.
 
 6. **Result** — A single solid remains. If something went wrong, press **Ctrl+Z** to undo the entire operation.
 
@@ -71,7 +71,7 @@ Registers a color to identify which solids should be subtracted during Combine A
 3. Paint the window shapes red
 4. Set subtract color to red (if not already done)
 5. Select the wall + all window shapes
-6. Click **Combine All PRO (Union)**
+6. Click **Combine All (Union)**
 7. Result: wall with window openings cut out
 
 ### Example: Merging Multiple Rooms
@@ -79,15 +79,15 @@ Registers a color to identify which solids should be subtracted during Combine A
 1. Create each room as a solid group (walls, floor, ceiling)
 2. No objects need the subtract color
 3. Select all room groups
-4. Click **Combine All PRO (Shell)** for a clean outer envelope
+4. Click **Combine All (Shell)** for a clean outer envelope
 5. Result: one solid representing the entire building shell
 
 ## Toolbar Icons
 
 | Icon | Command | Description |
 |------|---------|-------------|
-| Combine PRO Union | Combine All PRO (Union) | Native union + subtract |
-| Combine PRO Shell | Combine All PRO (Shell) | Native outer shell + subtract |
+| Combine Union | Combine All (Union) | Native union + subtract |
+| Combine Shell | Combine All (Shell) | Native outer shell + subtract |
 | Set Color | Set Subtract Color | Pick color from selection |
 
 ## Troubleshooting

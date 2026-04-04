@@ -13,7 +13,7 @@ Le plugin fournit trois commandes accessibles via le menu **Extensions > Solid B
 
 ## Commandes
 
-### Combine All PRO (Union)
+### Combine All (Union)
 
 Fusionne tous les solides selectionnes en un seul, en utilisant `union` natif pour les solides de base et `subtract` natif pour les solides-outils marques par couleur.
 
@@ -27,9 +27,9 @@ Fusionne tous les solides selectionnes en un seul, en utilisant `union` natif po
 
 **Quand l'utiliser :** Quand vous voulez fusionner des solides en preservant les vides internes (ex. fusion de murs avec des ouvertures de fenetres).
 
-### Combine All PRO (Shell)
+### Combine All (Shell)
 
-Meme principe que Combine All PRO (Union), mais utilise `outer_shell` au lieu de `union` en Phase 1.
+Meme principe que Combine All (Union), mais utilise `outer_shell` au lieu de `union` en Phase 1.
 
 **Difference avec Union :**
 - **Union** preserve la geometrie interne (vides, faces internes)
@@ -60,7 +60,7 @@ Enregistre une couleur pour identifier les solides a soustraire lors des operati
 
 4. **Selectionnez tout** — Selectionnez tous les solides a traiter (bases et outils).
 
-5. **Lancez l'operation** — Cliquez sur **Combine All PRO (Union)** ou **Combine All PRO (Shell)**.
+5. **Lancez l'operation** — Cliquez sur **Combine All (Union)** ou **Combine All (Shell)**.
 
 6. **Resultat** — Un seul solide reste. En cas de probleme, appuyez sur **Ctrl+Z** pour annuler l'operation entiere.
 
@@ -71,7 +71,7 @@ Enregistre une couleur pour identifier les solides a soustraire lors des operati
 3. Peignez les formes de fenetres en rouge
 4. Definissez la couleur de soustraction sur rouge (si ce n'est pas deja fait)
 5. Selectionnez le mur + toutes les formes de fenetres
-6. Cliquez sur **Combine All PRO (Union)**
+6. Cliquez sur **Combine All (Union)**
 7. Resultat : mur avec les ouvertures de fenetres decoupees
 
 ### Exemple : Fusion de plusieurs pieces
@@ -79,15 +79,15 @@ Enregistre une couleur pour identifier les solides a soustraire lors des operati
 1. Creez chaque piece comme un groupe solide (murs, sol, plafond)
 2. Aucun objet n'a besoin de la couleur de soustraction
 3. Selectionnez tous les groupes de pieces
-4. Cliquez sur **Combine All PRO (Shell)** pour une enveloppe exterieure propre
+4. Cliquez sur **Combine All (Shell)** pour une enveloppe exterieure propre
 5. Resultat : un seul solide representant l'enveloppe du batiment
 
 ## Icones de la barre d'outils
 
 | Icone | Commande | Description |
 |-------|----------|-------------|
-| Combine PRO Union | Combine All PRO (Union) | Union native + soustraction |
-| Combine PRO Shell | Combine All PRO (Shell) | Outer shell native + soustraction |
+| Combine Union | Combine All (Union) | Union native + soustraction |
+| Combine Shell | Combine All (Shell) | Outer shell native + soustraction |
 | Set Color | Set Subtract Color | Choix couleur depuis la selection |
 
 ## Resolution de problemes

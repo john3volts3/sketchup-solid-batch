@@ -4,8 +4,8 @@ module SolidBatch
   unless @loaded
     submenu = UI.menu('Extensions').add_submenu(PLUGIN_NAME)
 
-    submenu.add_item('Combine All PRO (Union)') { self.do_combine_all_pro(:union) }
-    submenu.add_item('Combine All PRO (Shell)') { self.do_combine_all_pro(:outer_shell) }
+    submenu.add_item('Combine All (Union)') { self.do_combine_all_pro(:union) }
+    submenu.add_item('Combine All (Shell)') { self.do_combine_all_pro(:outer_shell) }
     submenu.add_separator
     submenu.add_item('Set Subtract Color') { self.do_set_subtract_color }
 
@@ -13,14 +13,14 @@ module SolidBatch
 
     icons_dir = File.join(PLUGIN_DIR, 'solid_batch', 'icons')
 
-    cmd_combine_pro_union = UI::Command.new('Combine All PRO (Union)') { self.do_combine_all_pro(:union) }
-    cmd_combine_pro_union.tooltip = 'Combine All PRO (Union) — native union + subtract'
+    cmd_combine_pro_union = UI::Command.new('Combine All (Union)') { self.do_combine_all_pro(:union) }
+    cmd_combine_pro_union.tooltip = 'Combine All (Union) — native union + subtract'
     cmd_combine_pro_union.small_icon = File.join(icons_dir, 'combine_pro_union_16.png')
     cmd_combine_pro_union.large_icon = File.join(icons_dir, 'combine_pro_union_24.png')
     toolbar.add_item(cmd_combine_pro_union)
 
-    cmd_combine_pro_shell = UI::Command.new('Combine All PRO (Shell)') { self.do_combine_all_pro(:outer_shell) }
-    cmd_combine_pro_shell.tooltip = 'Combine All PRO (Shell) — native outer shell + subtract'
+    cmd_combine_pro_shell = UI::Command.new('Combine All (Shell)') { self.do_combine_all_pro(:outer_shell) }
+    cmd_combine_pro_shell.tooltip = 'Combine All (Shell) — native outer shell + subtract'
     cmd_combine_pro_shell.small_icon = File.join(icons_dir, 'combine_pro_shell_16.png')
     cmd_combine_pro_shell.large_icon = File.join(icons_dir, 'combine_pro_shell_24.png')
     toolbar.add_item(cmd_combine_pro_shell)
@@ -131,7 +131,7 @@ module SolidBatch
     subtract_solids = solids.select { |s| is_subtract_solid?(s) }
 
     mode_label = mode == :outer_shell ? 'Outer Shell' : 'Union'
-    puts "[Solid Batch] Combine All PRO (#{mode_label}): #{union_solids.length} union, #{subtract_solids.length} subtract"
+    puts "[Solid Batch] Combine All (#{mode_label}): #{union_solids.length} union, #{subtract_solids.length} subtract"
 
     if union_solids.empty?
       UI.messagebox(
@@ -143,7 +143,7 @@ module SolidBatch
     end
 
     model = Sketchup.active_model
-    model.start_operation("Solid Batch — Combine All PRO (#{mode_label})", true)
+    model.start_operation("Solid Batch — Combine All (#{mode_label})", true)
     begin
       # Phase 1: Union/Shell all non-subtract solids
       result = union_solids[0]
@@ -155,7 +155,7 @@ module SolidBatch
           result = result.send(mode, other)
           unless result&.valid?
             model.abort_operation
-            UI.messagebox("Combine All PRO failed at #{mode_label} step #{i + 1}.", MB_OK)
+            UI.messagebox("Combine All failed at #{mode_label} step #{i + 1}.", MB_OK)
             return
           end
         end
@@ -174,7 +174,7 @@ module SolidBatch
           result = tool.subtract(result)
           unless result&.valid?
             model.abort_operation
-            UI.messagebox("Combine All PRO failed at subtract step #{i + 1}.", MB_OK)
+            UI.messagebox("Combine All failed at subtract step #{i + 1}.", MB_OK)
             return
           end
         end
@@ -183,12 +183,12 @@ module SolidBatch
       model.commit_operation
       model.selection.clear
       model.selection.add(result) if result&.valid?
-      puts "[Solid Batch] Combine All PRO (#{mode_label}) done."
+      puts "[Solid Batch] Combine All (#{mode_label}) done."
     rescue => e
       model.abort_operation
-      puts "[Solid Batch] Combine All PRO error: #{e.message}"
+      puts "[Solid Batch] Combine All error: #{e.message}"
       e.backtrace.first(10).each { |line| puts "  #{line}" }
-      UI.messagebox("Combine All PRO error: #{e.message}", MB_OK)
+      UI.messagebox("Combine All error: #{e.message}", MB_OK)
     end
   end
 end

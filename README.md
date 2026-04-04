@@ -8,8 +8,8 @@
 
 ## Features
 
-- **Combine All PRO (Union)** — Select multiple solids, automatically union all base solids then subtract color-marked objects. Single undo step.
-- **Combine All PRO (Shell)** — Same workflow using Outer Shell instead of Union (merges overlapping volumes into one shell).
+- **Combine All (Union)** — Select multiple solids, automatically union all base solids then subtract color-marked objects. Single undo step.
+- **Combine All (Shell)** — Same workflow using Outer Shell instead of Union (merges overlapping volumes into one shell).
 - **Set Subtract Color** — Pick a color from a selected object to mark which solids should be subtracted during Combine All operations.
 
 All operations use SketchUp Pro's native boolean engine for maximum reliability.
@@ -30,7 +30,7 @@ All operations use SketchUp Pro's native boolean engine for maximum reliability.
 1. Paint the objects you want to subtract with a specific color (e.g. red)
 2. Use **Set Subtract Color** to register that color
 3. Select all your solids (bases + tools)
-4. Click **Combine All PRO (Union)** or **Combine All PRO (Shell)**
+4. Click **Combine All (Union)** or **Combine All (Shell)**
 5. Done — one solid, one undo step
 
 ## Documentation
@@ -56,8 +56,8 @@ MIT License — see [LICENSE.md](LICENSE.md)
 
 ## Fonctionnalites
 
-- **Combine All PRO (Union)** — Selectionnez plusieurs solides, fusionne automatiquement les solides de base puis soustrait les objets marques par couleur. Une seule etape d'annulation.
-- **Combine All PRO (Shell)** — Meme principe avec Outer Shell au lieu de Union (fusionne les volumes en une seule coque).
+- **Combine All (Union)** — Selectionnez plusieurs solides, fusionne automatiquement les solides de base puis soustrait les objets marques par couleur. Une seule etape d'annulation.
+- **Combine All (Shell)** — Meme principe avec Outer Shell au lieu de Union (fusionne les volumes en une seule coque).
 - **Set Subtract Color** — Choisissez une couleur depuis un objet selectionne pour marquer les solides a soustraire.
 
 Toutes les operations utilisent le moteur booleen natif de SketchUp Pro pour une fiabilite maximale.
@@ -78,7 +78,7 @@ Toutes les operations utilisent le moteur booleen natif de SketchUp Pro pour une
 1. Peindre les objets a soustraire avec une couleur specifique (ex. rouge)
 2. Utiliser **Set Subtract Color** pour enregistrer cette couleur
 3. Selectionner tous vos solides (bases + outils)
-4. Cliquer sur **Combine All PRO (Union)** ou **Combine All PRO (Shell)**
+4. Cliquer sur **Combine All (Union)** ou **Combine All (Shell)**
 5. Termine — un seul solide, un seul Ctrl+Z
 
 ## Documentation
