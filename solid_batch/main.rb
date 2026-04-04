@@ -143,19 +143,24 @@ module SolidBatch
     end
 
     model = Sketchup.active_model
-    model.start_operation("Solid Batch — Combine All (#{mode_label})", true)
+    op_name = "Solid Batch — Combine All (#{mode_label})"
+    first_op = true
     begin
       # Phase 1: Union/Shell all non-subtract solids
       result = union_solids[0]
       if union_solids.length >= 2
         puts "[Solid Batch]   Phase 1: #{mode_label} #{union_solids.length} solids..."
         union_solids[1..-1].each_with_index do |other, i|
+          model.start_operation(op_name, true, false, !first_op)
+          first_op = false
+          model.selection.clear
           result = result.send(mode, other)
           unless result&.valid?
             model.abort_operation
             UI.messagebox("Combine All failed at #{mode_label} step #{i + 1}.", MB_OK)
             return
           end
+          model.commit_operation
         end
       else
         puts "[Solid Batch]   Phase 1: Single base solid, skipping #{mode_label}"
@@ -167,16 +172,19 @@ module SolidBatch
       if subtract_solids.any?
         puts "[Solid Batch]   Phase 2: Subtract #{subtract_solids.length} solids..."
         subtract_solids.each_with_index do |tool, i|
+          model.start_operation(op_name, true, false, !first_op)
+          first_op = false
+          model.selection.clear
           result = tool.subtract(result)
           unless result&.valid?
             model.abort_operation
             UI.messagebox("Combine All failed at subtract step #{i + 1}.", MB_OK)
             return
           end
+          model.commit_operation
         end
       end
 
-      model.commit_operation
       model.selection.clear
       model.selection.add(result) if result&.valid?
       puts "[Solid Batch] Combine All (#{mode_label}) done."
