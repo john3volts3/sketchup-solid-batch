@@ -2,6 +2,142 @@ module DRO_SolidOps
   module BooleanOps
 
     IDENTITY = Geom::Transformation.new unless defined?(IDENTITY)
+    OCTREE_MIN_FACES = 50
+    OCTREE_MAX_DEPTH = 5
+    OCTREE_MAX_PER_NODE = 8
+
+    # =================================================================
+    # FaceOctree — spatial index for fast ray-face queries
+    # =================================================================
+
+    class FaceOctree
+      attr_reader :bounds
+
+      def initialize(faces, bounds, depth = 0)
+        @bounds = bounds
+        @faces = []
+        @children = nil
+
+        if depth >= OCTREE_MAX_DEPTH || faces.length <= OCTREE_MAX_PER_NODE
+          @faces = faces
+        else
+          @children = []
+          mid = Geom::Point3d.new(
+            (bounds.min.x + bounds.max.x) / 2.0,
+            (bounds.min.y + bounds.max.y) / 2.0,
+            (bounds.min.z + bounds.max.z) / 2.0
+          )
+
+          8.times do |i|
+            child_min = Geom::Point3d.new(
+              (i & 1 == 0) ? bounds.min.x : mid.x,
+              (i & 2 == 0) ? bounds.min.y : mid.y,
+              (i & 4 == 0) ? bounds.min.z : mid.z
+            )
+            child_max = Geom::Point3d.new(
+              (i & 1 == 0) ? mid.x : bounds.max.x,
+              (i & 2 == 0) ? mid.y : bounds.max.y,
+              (i & 4 == 0) ? mid.z : bounds.max.z
+            )
+            child_bounds = Geom::BoundingBox.new
+            child_bounds.add(child_min, child_max)
+
+            child_faces = faces.select { |f| face_overlaps_box?(f, child_bounds) }
+            @children << FaceOctree.new(child_faces, child_bounds, depth + 1)
+          end
+        end
+      end
+
+      # Collect all faces in nodes that the ray passes through
+      def query_ray(origin, direction)
+        return [] unless ray_intersects_box?(origin, direction, @bounds)
+
+        if @children
+          result = []
+          @children.each do |child|
+            result.concat(child.query_ray(origin, direction))
+          end
+          result.uniq
+        else
+          @faces
+        end
+      end
+
+      private
+
+      def self.face_overlaps_box?(face, box)
+        fb = face.bounds
+        fb.max.x >= box.min.x && fb.min.x <= box.max.x &&
+          fb.max.y >= box.min.y && fb.min.y <= box.max.y &&
+          fb.max.z >= box.min.z && fb.min.z <= box.max.z
+      end
+
+      def face_overlaps_box?(face, box)
+        self.class.face_overlaps_box?(face, box)
+      end
+
+      def ray_intersects_box?(origin, direction, box)
+        # Slab intersection test
+        tmin = -Float::INFINITY
+        tmax = Float::INFINITY
+
+        [0, 1, 2].each do |axis|
+          o = case axis; when 0; origin.x; when 1; origin.y; when 2; origin.z; end
+          d = case axis; when 0; direction.x; when 1; direction.y; when 2; direction.z; end
+          bmin = case axis; when 0; box.min.x; when 1; box.min.y; when 2; box.min.z; end
+          bmax = case axis; when 0; box.max.x; when 1; box.max.y; when 2; box.max.z; end
+
+          if d.abs < 1e-10
+            return false if o < bmin || o > bmax
+          else
+            t1 = (bmin - o) / d
+            t2 = (bmax - o) / d
+            t1, t2 = t2, t1 if t1 > t2
+            tmin = t1 if t1 > tmin
+            tmax = t2 if t2 < tmax
+            return false if tmin > tmax
+          end
+        end
+
+        # Ray goes forward only (t >= 0)
+        tmax >= 0
+      end
+    end
+
+    # =================================================================
+    # Octree cache and accessor
+    # =================================================================
+
+    @octree_cache = {}
+
+    def self.octree_for(defn)
+      face_count = defn.entities.grep(Sketchup::Face).length
+      return nil if face_count < OCTREE_MIN_FACES
+
+      cached = @octree_cache[defn.entityID]
+      if cached && cached[:face_count] == face_count
+        return cached[:octree]
+      end
+
+      faces = defn.entities.grep(Sketchup::Face).to_a
+      octree = FaceOctree.new(faces, defn.bounds)
+      @octree_cache[defn.entityID] = { octree: octree, face_count: face_count }
+      puts "[Solid Ops]   Built octree for #{face_count} faces"
+      octree
+    end
+
+    def self.octree_faces_for_ray(defn, origin, direction)
+      octree = octree_for(defn)
+      if octree
+        octree.query_ray(origin, direction)
+      else
+        defn.entities.grep(Sketchup::Face)
+      end
+    end
+
+    def self.clear_octree_cache
+      @octree_cache.clear
+    end
 
     # =================================================================
     # Utility methods (ported from Eneroth Solid Tools)
@@ -44,11 +180,19 @@ module DRO_SolidOps
 
       point = point.transform(container.transformation.inverse)
 
+      # Bounding box pre-check: point outside bounds cannot be inside solid
+      defn = definition(container)
+      bounds = defn.bounds
+      return false unless bounds.contains?(point)
+
       vector = Geom::Vector3d.new(234, 1343, 345)
       ray = [point, vector]
       intersections = []
 
-      definition(container).entities.grep(Sketchup::Face) do |face|
+      # Use octree if available for this definition, otherwise iterate all faces
+      faces = octree_faces_for_ray(defn, point, vector)
+
+      faces.each do |face|
         return on_boundary if within_face?(point, face)
 
         intersection = Geom.intersect_line_plane(ray, face.plane)
@@ -232,6 +376,7 @@ module DRO_SolidOps
     # =================================================================
 
     def self.union(solids, model, wrap_operation: true)
+      clear_octree_cache
       model.start_operation('Solid Ops — Union', true) if wrap_operation
       begin
         puts "[Solid Ops] Union: #{solids.length} solids"
@@ -297,6 +442,7 @@ module DRO_SolidOps
     end
 
     def self.subtract(base, tool, model, wrap_operation: true)
+      clear_octree_cache
       model.start_operation('Solid Ops — Subtract', true) if wrap_operation
       begin
         puts "[Solid Ops] Subtract"
@@ -355,6 +501,7 @@ module DRO_SolidOps
     end
 
     def self.split(solid_a, solid_b, model)
+      clear_octree_cache
       model.start_operation('Solid Ops — Split', true)
       begin
         puts "[Solid Ops] Split"

@@ -10,6 +10,17 @@
 
 ## Session du 2026-04-04
 
+### v2.0.0 — Optimisation : Bounding Box + Octree spatial
+
+- **dro_solid_ops/boolean_ops.rb** — Ajout classe `FaceOctree` et optimisation de `within?` :
+  - Bounding box pre-check : rejet immédiat si le point est hors de la bounding box du container
+  - `FaceOctree` : octree spatial qui indexe les faces par leur bounding box, avec traversée par rayon (`query_ray`). Construction récursive (max depth 5, max 8 faces/nœud). Test d'intersection rayon-boîte par slab intersection.
+  - Construction lazy : octree créé uniquement pour les containers avec > 50 faces
+  - Cache par `definition.entityID`, invalidé si le nombre de faces change
+  - `octree_faces_for_ray` : retourne les faces candidates via l'octree ou itération directe (fallback)
+  - `clear_octree_cache` appelé en début de `union`, `subtract`, `split` pour invalider le cache
+- **dro_solid_ops/version.rb** — Version 2.0.0
+
 ### Nouvelles fonctionnalités : Combine All, Combine All PRO, Set Subtract Color
 
 - **dro_solid_ops/main.rb** — Ajout de 4 nouvelles commandes :
