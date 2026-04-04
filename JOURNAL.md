@@ -8,6 +8,19 @@
 
 ---
 
+## Session du 2026-04-04 (4)
+
+### Optimisation performance + barre de statut
+
+- **solid_batch/main.rb** — Optimisation des opérations batch :
+  - Chaque étape booléenne a son propre `start_operation`/`commit_operation` (petits deltas = commits rapides)
+  - Le paramètre `transparent = true` chaîne toutes les étapes en un seul Ctrl+Z
+  - Ajout barre de statut avec progression : `Solid Batch — Subtract 7/13 (54%)`
+  - Message final : `Solid Batch — Done (13 operations)`
+- **build/solid_batch.rbz** — Reconstruit
+
+---
+
 ## Session du 2026-04-04 (3)
 
 ### Renommage `dro_solid_ops` → `solid_batch`

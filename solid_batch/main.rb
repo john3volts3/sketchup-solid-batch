@@ -145,12 +145,17 @@ module SolidBatch
     model = Sketchup.active_model
     op_name = "Solid Batch — Combine All (#{mode_label})"
     first_op = true
+    total_steps = (union_solids.length > 1 ? union_solids.length - 1 : 0) + subtract_solids.length
+    current_step = 0
     begin
       # Phase 1: Union/Shell all non-subtract solids
       result = union_solids[0]
       if union_solids.length >= 2
         puts "[Solid Batch]   Phase 1: #{mode_label} #{union_solids.length} solids..."
         union_solids[1..-1].each_with_index do |other, i|
+          current_step += 1
+          pct = (current_step * 100.0 / total_steps).round
+          Sketchup.status_text = "Solid Batch — #{mode_label} #{current_step}/#{total_steps} (#{pct}%)"
           model.start_operation(op_name, true, false, !first_op)
           first_op = false
           model.selection.clear
@@ -172,6 +177,9 @@ module SolidBatch
       if subtract_solids.any?
         puts "[Solid Batch]   Phase 2: Subtract #{subtract_solids.length} solids..."
         subtract_solids.each_with_index do |tool, i|
+          current_step += 1
+          pct = (current_step * 100.0 / total_steps).round
+          Sketchup.status_text = "Solid Batch — Subtract #{current_step}/#{total_steps} (#{pct}%)"
           model.start_operation(op_name, true, false, !first_op)
           first_op = false
           model.selection.clear
@@ -187,6 +195,7 @@ module SolidBatch
 
       model.selection.clear
       model.selection.add(result) if result&.valid?
+      Sketchup.status_text = "Solid Batch — Done (#{total_steps} operations)"
       puts "[Solid Batch] Combine All (#{mode_label}) done."
     rescue => e
       model.abort_operation
