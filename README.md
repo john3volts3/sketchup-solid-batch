@@ -12,6 +12,10 @@ https://github.com/user-attachments/assets/demo.mp4
 
 > *See [docs/demo.mp4](docs/demo.mp4) if the video doesn't play above.*
 
+## Why Solid Batch?
+
+When designing technical parts for 3D printing in SketchUp, a common workflow is to build up complex shapes from simple volumes — boxes, cylinders, extrusions — then combine them using boolean operations at the end of each design stage or at the very end. Manually running union and subtract on dozens of objects one by one is tedious and time-consuming. Solid Batch automates this: select all your solids, click once, and the plugin unions the bases and subtracts the tools in a single batch operation.
+
 ## Features
 
 - **Combine All (Union)** — Select multiple solids, automatically union all base solids then subtract color-marked objects. Single undo step.
@@ -63,6 +67,10 @@ MIT License — see [LICENSE.md](LICENSE.md)
 ## Demo
 
 > *Voir la video ci-dessus ou [docs/demo.mp4](docs/demo.mp4)*
+
+## Pourquoi Solid Batch ?
+
+Lors de la conception de pieces techniques pour l'impression 3D dans SketchUp, une methode courante consiste a construire des formes complexes a partir de volumes simples — boites, cylindres, extrusions — puis a les combiner par operations booleennes a la fin de chaque etape ou tout a la fin du design. Executer manuellement les unions et soustractions sur des dizaines d'objets un par un est fastidieux et chronophage. Solid Batch automatise tout cela : selectionnez tous vos solides, un seul clic, et le plugin fusionne les bases et soustrait les outils en une seule operation.
 
 ## Fonctionnalites
 
