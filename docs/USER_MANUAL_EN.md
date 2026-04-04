@@ -110,6 +110,9 @@ One of the boolean operations failed. This usually means:
 - The geometry is too complex or has coplanar faces
 - Try reordering or simplifying the problematic solids
 
+### Progress
+During batch operations, the status bar at the bottom of the SketchUp window shows real-time progress: `Solid Batch — Subtract 7/13 (54%)`. A final message confirms completion: `Solid Batch — Done (13 operations)`.
+
 ### Undo
 All Combine All operations are wrapped in a single undo step. Press **Ctrl+Z** (Cmd+Z on Mac) to revert the entire operation.
 

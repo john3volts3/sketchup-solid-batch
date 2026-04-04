@@ -91,6 +91,8 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | NFR-03 | Subtract color persists across sessions via SketchUp registry |
 | NFR-04 | Console logging (`puts`) for each operation step for debugging |
 | NFR-05 | Graceful error handling with abort + revert on failure |
+| NFR-06 | Status bar progress display during batch operations (`Solid Batch — Subtract 7/13 (54%)`) |
+| NFR-07 | Transparent operations: each boolean step has its own start/commit (fast small deltas) chained via `transparent = true` for single undo |
 
 ## 5. Architecture
 
@@ -147,16 +149,23 @@ Check native method availability (respond_to?)
 Separate solids by subtract color
   |
   v
-start_operation (single undo step)
-  |
-  +---> Phase 1: sequential union/outer_shell of base solids
-  |       base[0].union(base[1]) -> result.union(base[2]) -> ...
+Phase 1: sequential union/outer_shell of base solids
+  |   For each step:
+  |     start_operation(transparent = !first_op)
+  |     base[0].union(base[1]) -> commit
+  |     start_operation(transparent = true)
+  |     result.union(base[2]) -> commit -> ...
   |
   +---> Phase 2: sequential subtract of tool solids
-  |       tool[0].subtract(result) -> tool[1].subtract(result) -> ...
+  |   For each step:
+  |     start_operation(transparent = true)
+  |     tool[0].subtract(result) -> commit
+  |     tool[1].subtract(result) -> commit -> ...
+  |
+  +---> Status bar: "Solid Batch — Subtract 7/13 (54%)"
   |
   v
-commit_operation
+All steps chained via transparent operations → single Ctrl+Z
   |
   v
 Select result
@@ -219,4 +228,4 @@ All user-facing messages use `UI.messagebox` with `MB_OK`. Error messages includ
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-04-03 | Initial release — custom boolean engine (union, subtract, split) |
-| 2.0.0 | 2026-04-04 | Removed custom engine. Added Combine All (Union/Shell) using native Pro methods. Added Set Subtract Color. Removed Union, Subtract, Split individual operations. |
+| 2.0.0 | 2026-04-04 | Removed custom engine. Added Combine All (Union/Shell) using native Pro methods. Added Set Subtract Color. Removed Union, Subtract, Split individual operations. Transparent operations for fast commits + single undo. Status bar progress display. |

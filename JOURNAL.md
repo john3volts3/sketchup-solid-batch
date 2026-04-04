@@ -8,6 +8,18 @@
 
 ---
 
+## Session du 2026-04-04 (5)
+
+### Livraison — mise à jour documentation
+
+- **docs/FSD_EN.md** — Ajout NFR-06 (status bar progress), NFR-07 (transparent operations), mise à jour flow diagram et version history
+- **docs/FSD_FR.md** — Idem en français (ENF-06, ENF-07)
+- **docs/USER_MANUAL_EN.md** — Ajout section "Progress" (status bar pendant les opérations batch)
+- **docs/USER_MANUAL_FR.md** — Ajout section "Progression" (idem en français)
+- **Copie plugins** — Fichiers copiés vers le dossier plugins SketchUp 2021
+
+---
+
 ## Session du 2026-04-04 (4)
 
 ### Optimisation performance + barre de statut

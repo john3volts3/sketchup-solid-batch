@@ -91,6 +91,8 @@ Solid Batch est un plugin SketchUp Pro qui permet d'effectuer des operations boo
 | ENF-03 | La couleur de soustraction persiste entre les sessions via le registre SketchUp |
 | ENF-04 | Journalisation console (`puts`) pour chaque etape d'operation pour le debogage |
 | ENF-05 | Gestion d'erreur gracieuse avec abandon + annulation en cas d'echec |
+| ENF-06 | Affichage de la progression dans la barre de statut pendant les operations batch (`Solid Batch — Subtract 7/13 (54%)`) |
+| ENF-07 | Operations transparentes : chaque etape booleenne a son propre start/commit (petits deltas rapides) chainees via `transparent = true` pour un seul undo |
 
 ## 5. Architecture
 
@@ -147,16 +149,23 @@ Verifier la disponibilite de la methode native (respond_to?)
 Separer les solides par couleur de soustraction
   |
   v
-start_operation (etape d'annulation unique)
-  |
-  +---> Phase 1 : union/outer_shell sequentiel des solides de base
-  |       base[0].union(base[1]) -> result.union(base[2]) -> ...
+Phase 1 : union/outer_shell sequentiel des solides de base
+  |   Pour chaque etape :
+  |     start_operation(transparent = !first_op)
+  |     base[0].union(base[1]) -> commit
+  |     start_operation(transparent = true)
+  |     result.union(base[2]) -> commit -> ...
   |
   +---> Phase 2 : soustraction sequentielle des solides-outils
-  |       tool[0].subtract(result) -> tool[1].subtract(result) -> ...
+  |   Pour chaque etape :
+  |     start_operation(transparent = true)
+  |     tool[0].subtract(result) -> commit
+  |     tool[1].subtract(result) -> commit -> ...
+  |
+  +---> Barre de statut : "Solid Batch — Subtract 7/13 (54%)"
   |
   v
-commit_operation
+Toutes les etapes chainees via operations transparentes → un seul Ctrl+Z
   |
   v
 Selectionner le resultat
@@ -219,4 +228,4 @@ Tous les messages utilisateur utilisent `UI.messagebox` avec `MB_OK`. Les messag
 | Version | Date | Changements |
 |---------|------|-------------|
 | 1.0.0 | 2026-04-03 | Version initiale — moteur booleen custom (union, subtract, split) |
-| 2.0.0 | 2026-04-04 | Suppression du moteur custom. Ajout Combine All (Union/Shell) utilisant les methodes natives Pro. Ajout Set Subtract Color. Suppression des operations individuelles Union, Subtract, Split. |
+| 2.0.0 | 2026-04-04 | Suppression du moteur custom. Ajout Combine All (Union/Shell) utilisant les methodes natives Pro. Ajout Set Subtract Color. Suppression des operations individuelles Union, Subtract, Split. Operations transparentes pour commits rapides + undo unique. Affichage progression dans la barre de statut. |

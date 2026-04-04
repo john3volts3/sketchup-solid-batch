@@ -110,6 +110,9 @@ Une des operations booleennes a echoue. Causes habituelles :
 - La geometrie est trop complexe ou a des faces coplanaires
 - Essayez de reordonner ou simplifier les solides problematiques
 
+### Progression
+Pendant les operations par lot, la barre de statut en bas de la fenetre SketchUp affiche la progression en temps reel : `Solid Batch — Subtract 7/13 (54%)`. Un message final confirme la fin : `Solid Batch — Done (13 operations)`.
+
 ### Annulation
 Toutes les operations Combine All sont encapsulees dans une seule etape d'annulation. Appuyez sur **Ctrl+Z** (Cmd+Z sur Mac) pour annuler l'operation entiere.
 
