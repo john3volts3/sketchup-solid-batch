@@ -1,10 +1,10 @@
-# Solid Ops — Manuel utilisateur
+# Solid Batch — Manuel utilisateur
 
 ## Presentation
 
-Solid Ops est un plugin SketchUp Pro qui effectue des operations booleennes par lot sur plusieurs solides en un seul clic. Il utilise le moteur booleen natif de SketchUp Pro pour des resultats fiables.
+Solid Batch est un plugin SketchUp Pro qui effectue des operations booleennes par lot sur plusieurs solides en un seul clic. Il utilise le moteur booleen natif de SketchUp Pro pour des resultats fiables.
 
-Le plugin fournit trois commandes accessibles via le menu **Extensions > Solid Ops** et la barre d'outils **Solid Ops**.
+Le plugin fournit trois commandes accessibles via le menu **Extensions > Solid Batch** et la barre d'outils **Solid Batch**.
 
 ## Prerequis
 

@@ -1,10 +1,25 @@
-# Journal des modifications — Solid Ops
+# Journal des modifications — Solid Batch
 
 ## Roadmap
 
 - **v1.0** (livrée 2026-04-03) — Port fidèle d'Eneroth Solid Tools. Union, Subtract (multi-clic), Split. Ruby pur, fonctionne sans SketchUp Pro. Performances O(n²) sur le ray casting.
 - **v2.0** (planifiée) — Optimisation Ruby : index spatial (bounding box pre-check, octree) pour `within?`, hash des plans pour `find_corresponding_faces`. Cible : 10-50x plus rapide sur modèles complexes (1000+ faces).
 - **v3.0** (planifiée) — Backend Python avec trimesh/CGAL pour les opérations booléennes. Le plugin Ruby exporte la géométrie, appelle un script Python, réimporte le résultat. Vitesse C++ native pour le calcul booléen.
+
+---
+
+## Session du 2026-04-04 (3)
+
+### Renommage `dro_solid_ops` → `solid_batch`
+
+- **dro_solid_ops.rb** → **solid_batch.rb** — Renommé fichier, module `DRO_SolidOps` → `SolidBatch`, `PLUGIN_NAME` → `'Solid Batch'`
+- **dro_solid_ops/** → **solid_batch/** — Renommé dossier entier
+- **solid_batch/main.rb** — Module `SolidBatch`, registre `SolidBatch`, logs `[Solid Batch]`, chemin icônes `solid_batch/icons`
+- **solid_batch/version.rb** — Module `SolidBatch`
+- **README.md** — Mis à jour : Solid Batch, `solid_batch.rbz`
+- **docs/*.md** — Tous les docs EN/FR mis à jour avec les nouveaux noms
+- **build/solid_batch.rbz** — Reconstruit avec les fichiers renommés
+- **.gitignore** — Retiré `build/` pour l'inclure dans le repo
 
 ---
 

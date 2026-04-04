@@ -1,4 +1,4 @@
-# Solid Ops — Functional Specification Document
+# Solid Batch — Functional Specification Document
 
 **Version:** 2.0.0
 **Date:** 2026-04-04
@@ -8,7 +8,7 @@
 
 ## 1. Purpose
 
-Solid Ops is a SketchUp Pro plugin that enables batch boolean operations on multiple solids in a single action. It targets users who need to combine and subtract many solid objects efficiently (e.g., architectural modeling, 3D printing preparation, mechanical assemblies).
+Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on multiple solids in a single action. It targets users who need to combine and subtract many solid objects efficiently (e.g., architectural modeling, 3D printing preparation, mechanical assemblies).
 
 ## 2. Scope
 
@@ -71,7 +71,7 @@ Solid Ops is a SketchUp Pro plugin that enables batch boolean operations on mult
 | **Input** | Selection containing at least one group/component with a material applied |
 | **Process** | Read the material color from the first matching entity; persist RGB values to SketchUp registry |
 | **Output** | Confirmation message showing the registered RGB color |
-| **Persistence** | Color is stored in SketchUp registry under `DRO_SolidOps` namespace; survives application restart |
+| **Persistence** | Color is stored in SketchUp registry under `SolidBatch` namespace; survives application restart |
 | **Default** | Red (255, 0, 0) if no color has been set |
 
 #### FR-04: Solid Validation
@@ -97,8 +97,8 @@ Solid Ops is a SketchUp Pro plugin that enables batch boolean operations on mult
 ### 5.1 File Structure
 
 ```
-dro_solid_ops.rb              # Entry point — extension registration
-dro_solid_ops/
+solid_batch.rb              # Entry point — extension registration
+solid_batch/
   version.rb                  # VERSION constant
   main.rb                     # Menu, toolbar, commands, business logic
   icons/
@@ -113,9 +113,9 @@ dro_solid_ops/
 ### 5.2 Module Structure
 
 ```
-DRO_SolidOps                  # Top-level namespace
+SolidBatch                  # Top-level namespace
   PLUGIN_DIR                  # Plugin directory path
-  PLUGIN_NAME                 # "Solid Ops"
+  PLUGIN_NAME                 # "Solid Batch"
   VERSION                     # "2.0.0"
 
   # Color management
@@ -179,15 +179,15 @@ The plugin uses the following SketchUp Pro Ruby API methods:
 
 | Data | Storage | Key | Default |
 |------|---------|-----|---------|
-| Subtract color (R) | SketchUp registry | `DRO_SolidOps/subtract_color_r` | 255 |
-| Subtract color (G) | SketchUp registry | `DRO_SolidOps/subtract_color_g` | 0 |
-| Subtract color (B) | SketchUp registry | `DRO_SolidOps/subtract_color_b` | 0 |
+| Subtract color (R) | SketchUp registry | `SolidBatch/subtract_color_r` | 255 |
+| Subtract color (G) | SketchUp registry | `SolidBatch/subtract_color_g` | 0 |
+| Subtract color (B) | SketchUp registry | `SolidBatch/subtract_color_b` | 0 |
 
 ## 7. User Interface
 
 ### 7.1 Menu
 
-Located at **Extensions > Solid Ops**:
+Located at **Extensions > Solid Batch**:
 1. Combine All PRO (Union)
 2. Combine All PRO (Shell)
 3. *(separator)*
@@ -195,7 +195,7 @@ Located at **Extensions > Solid Ops**:
 
 ### 7.2 Toolbar
 
-Named "Solid Ops", contains 3 buttons with 16px and 24px icon variants:
+Named "Solid Batch", contains 3 buttons with 16px and 24px icon variants:
 1. Combine All PRO (Union)
 2. Combine All PRO (Shell)
 3. Set Subtract Color

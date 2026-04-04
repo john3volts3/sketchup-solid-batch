@@ -1,4 +1,4 @@
-# Solid Ops — SketchUp Pro Plugin
+# Solid Batch — SketchUp Pro Plugin
 
 **Batch solid boolean operations using native SketchUp Pro tools.**
 
@@ -20,10 +20,10 @@ All operations use SketchUp Pro's native boolean engine for maximum reliability.
 
 ## Installation
 
-1. Download `dro_solid_ops.rbz` from the [Releases](../../releases) page
+1. Download `solid_batch.rbz` from the [Releases](../../releases) page
 2. In SketchUp: **Window > Extension Manager > Install Extension**
 3. Select the `.rbz` file
-4. The toolbar and menu appear under **Extensions > Solid Ops**
+4. The toolbar and menu appear under **Extensions > Solid Batch**
 
 ## Quick Start
 
@@ -50,7 +50,7 @@ MIT License — see [LICENSE.md](LICENSE.md)
 
 ---
 
-# Solid Ops — Plugin SketchUp Pro
+# Solid Batch — Plugin SketchUp Pro
 
 **Operations booleennes par lot sur les solides, utilisant les outils natifs de SketchUp Pro.**
 
@@ -68,10 +68,10 @@ Toutes les operations utilisent le moteur booleen natif de SketchUp Pro pour une
 
 ## Installation
 
-1. Telecharger `dro_solid_ops.rbz` depuis la page [Releases](../../releases)
+1. Telecharger `solid_batch.rbz` depuis la page [Releases](../../releases)
 2. Dans SketchUp : **Window > Extension Manager > Install Extension**
 3. Selectionner le fichier `.rbz`
-4. La barre d'outils et le menu apparaissent sous **Extensions > Solid Ops**
+4. La barre d'outils et le menu apparaissent sous **Extensions > Solid Batch**
 
 ## Demarrage rapide
 

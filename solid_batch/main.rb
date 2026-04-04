@@ -1,0 +1,194 @@
+require_relative 'version'
+
+module SolidBatch
+  unless @loaded
+    submenu = UI.menu('Extensions').add_submenu(PLUGIN_NAME)
+
+    submenu.add_item('Combine All PRO (Union)') { self.do_combine_all_pro(:union) }
+    submenu.add_item('Combine All PRO (Shell)') { self.do_combine_all_pro(:outer_shell) }
+    submenu.add_separator
+    submenu.add_item('Set Subtract Color') { self.do_set_subtract_color }
+
+    toolbar = UI::Toolbar.new(PLUGIN_NAME)
+
+    icons_dir = File.join(PLUGIN_DIR, 'solid_batch', 'icons')
+
+    cmd_combine_pro_union = UI::Command.new('Combine All PRO (Union)') { self.do_combine_all_pro(:union) }
+    cmd_combine_pro_union.tooltip = 'Combine All PRO (Union) — native union + subtract'
+    cmd_combine_pro_union.small_icon = File.join(icons_dir, 'combine_pro_union_16.png')
+    cmd_combine_pro_union.large_icon = File.join(icons_dir, 'combine_pro_union_24.png')
+    toolbar.add_item(cmd_combine_pro_union)
+
+    cmd_combine_pro_shell = UI::Command.new('Combine All PRO (Shell)') { self.do_combine_all_pro(:outer_shell) }
+    cmd_combine_pro_shell.tooltip = 'Combine All PRO (Shell) — native outer shell + subtract'
+    cmd_combine_pro_shell.small_icon = File.join(icons_dir, 'combine_pro_shell_16.png')
+    cmd_combine_pro_shell.large_icon = File.join(icons_dir, 'combine_pro_shell_24.png')
+    toolbar.add_item(cmd_combine_pro_shell)
+
+    cmd_setcolor = UI::Command.new('Set Subtract Color') { self.do_set_subtract_color }
+    cmd_setcolor.tooltip = 'Set Subtract Color — pick color from selection'
+    cmd_setcolor.small_icon = File.join(icons_dir, 'setcolor_16.png')
+    cmd_setcolor.large_icon = File.join(icons_dir, 'setcolor_24.png')
+    toolbar.add_item(cmd_setcolor)
+
+    toolbar.show
+    @loaded = true
+  end
+
+  # -------------------------------------------------------------------
+  # Subtract color management (persisted across sessions)
+  # -------------------------------------------------------------------
+  DEFAULT_SUBTRACT_COLOR = [255, 0, 0].freeze
+
+  def self.subtract_color
+    r = Sketchup.read_default('SolidBatch', 'subtract_color_r', DEFAULT_SUBTRACT_COLOR[0]).to_i
+    g = Sketchup.read_default('SolidBatch', 'subtract_color_g', DEFAULT_SUBTRACT_COLOR[1]).to_i
+    b = Sketchup.read_default('SolidBatch', 'subtract_color_b', DEFAULT_SUBTRACT_COLOR[2]).to_i
+    Sketchup::Color.new(r, g, b)
+  end
+
+  def self.save_subtract_color(color)
+    Sketchup.write_default('SolidBatch', 'subtract_color_r', color.red)
+    Sketchup.write_default('SolidBatch', 'subtract_color_g', color.green)
+    Sketchup.write_default('SolidBatch', 'subtract_color_b', color.blue)
+  end
+
+  def self.color_match?(c1, c2)
+    c1.red == c2.red && c1.green == c2.green && c1.blue == c2.blue
+  end
+
+  def self.is_subtract_solid?(entity)
+    return false unless entity.material
+    color_match?(entity.material.color, subtract_color)
+  end
+
+  # -------------------------------------------------------------------
+  # Validate selection: return array of manifold solids, or nil
+  # -------------------------------------------------------------------
+  def self.get_solids(min_count = 2)
+    model = Sketchup.active_model
+    sel = model.selection.to_a
+    solids = sel.select { |e|
+      (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) &&
+        e.manifold?
+    }
+
+    if solids.length < min_count
+      UI.messagebox(
+        "Select at least #{min_count} solid group(s) or component(s).\n" \
+        "Currently #{solids.length} valid solid(s) in selection.",
+        MB_OK
+      )
+      return nil
+    end
+    solids
+  end
+
+  # -------------------------------------------------------------------
+  # Actions
+  # -------------------------------------------------------------------
+  def self.do_set_subtract_color
+    model = Sketchup.active_model
+    sel = model.selection.to_a
+    entity = sel.find { |e|
+      (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) && e.material
+    }
+
+    unless entity
+      UI.messagebox(
+        "Select a group or component with a material/color applied.\n" \
+        "That color will be used to identify objects to subtract in Combine All.",
+        MB_OK
+      )
+      return
+    end
+
+    color = entity.material.color
+    save_subtract_color(color)
+    UI.messagebox(
+      "Subtract color set to RGB(#{color.red}, #{color.green}, #{color.blue}).\n" \
+      "Objects with this color will be subtracted when using Combine All.",
+      MB_OK
+    )
+  end
+
+  def self.do_combine_all_pro(mode)
+    solids = get_solids(2)
+    return unless solids
+
+    # Check if native Pro methods are available
+    unless solids[0].respond_to?(mode)
+      UI.messagebox(
+        "This function requires SketchUp Pro.\n" \
+        "The native '#{mode}' method is not available in your version.",
+        MB_OK
+      )
+      return
+    end
+
+    sub_color = subtract_color
+    union_solids = solids.reject { |s| is_subtract_solid?(s) }
+    subtract_solids = solids.select { |s| is_subtract_solid?(s) }
+
+    mode_label = mode == :outer_shell ? 'Outer Shell' : 'Union'
+    puts "[Solid Batch] Combine All PRO (#{mode_label}): #{union_solids.length} union, #{subtract_solids.length} subtract"
+
+    if union_solids.empty?
+      UI.messagebox(
+        "No base objects found (all selected objects have the subtract color).\n" \
+        "At least one object must NOT have the subtract color RGB(#{sub_color.red}, #{sub_color.green}, #{sub_color.blue}).",
+        MB_OK
+      )
+      return
+    end
+
+    model = Sketchup.active_model
+    model.start_operation("Solid Batch — Combine All PRO (#{mode_label})", true)
+    begin
+      # Phase 1: Union/Shell all non-subtract solids
+      result = union_solids[0]
+      if union_solids.length >= 2
+        puts "[Solid Batch]   Phase 1: #{mode_label} #{union_solids.length} solids..."
+        union_solids[1..-1].each_with_index do |other, i|
+          puts "[Solid Batch]     #{mode_label} step #{i + 1}..."
+          model.selection.clear
+          result = result.send(mode, other)
+          unless result&.valid?
+            model.abort_operation
+            UI.messagebox("Combine All PRO failed at #{mode_label} step #{i + 1}.", MB_OK)
+            return
+          end
+        end
+      else
+        puts "[Solid Batch]   Phase 1: Single base solid, skipping #{mode_label}"
+      end
+
+      # Phase 2: Subtract all subtract-colored solids
+      # Native subtract: tool.subtract(base) subtracts tool from base,
+      # erases tool, returns modified base
+      if subtract_solids.any?
+        puts "[Solid Batch]   Phase 2: Subtract #{subtract_solids.length} solids..."
+        subtract_solids.each_with_index do |tool, i|
+          puts "[Solid Batch]     subtract step #{i + 1}/#{subtract_solids.length}..."
+          model.selection.clear
+          result = tool.subtract(result)
+          unless result&.valid?
+            model.abort_operation
+            UI.messagebox("Combine All PRO failed at subtract step #{i + 1}.", MB_OK)
+            return
+          end
+        end
+      end
+
+      model.commit_operation
+      model.selection.clear
+      model.selection.add(result) if result&.valid?
+      puts "[Solid Batch] Combine All PRO (#{mode_label}) done."
+    rescue => e
+      model.abort_operation
+      puts "[Solid Batch] Combine All PRO error: #{e.message}"
+      e.backtrace.first(10).each { |line| puts "  #{line}" }
+      UI.messagebox("Combine All PRO error: #{e.message}", MB_OK)
+    end
+  end
+end
