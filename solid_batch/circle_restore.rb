@@ -1,13 +1,17 @@
 module SolidBatch
-  # CircleRestore — restoration of broken circles after boolean operations.
+  # CircleRestore — restoration of broken circles AND arcs after boolean operations.
   #
-  # Adapted from the Re-Cercle plugin (Claude Code, 2026). The algorithm
-  # detects circles purely from current geometry (no inventory phase needed)
-  # and welds matching edges back into a Curve so that a single click selects
-  # the whole circle again.
+  # Circle detection adapted from the Re-Cercle plugin (Claude Code, 2026).
+  # Arc detection added in v2.2.0 — same circumcircle math, but matches open
+  # chains (2 endpoints of degree 1) instead of closed loops.
+  #
+  # The algorithm detects shapes purely from current geometry (no inventory
+  # phase needed) and welds matching edges back into a Curve so that a single
+  # click selects the whole circle/arc again.
   module CircleRestore
     TOLERANCE = 0.1
-    MIN_SEGMENTS = 8
+    MIN_SEGMENTS = 8           # circles + stage 2 fragmented curves
+    DEFAULT_MIN_ARC_SEGMENTS = 8
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -22,19 +26,26 @@ module SolidBatch
       count_edges_in_entities(entities)
     end
 
-    # Restore broken circles inside a Group/ComponentInstance.
-    # Returns the number of circles welded.
-    def self.restore_in_solid(solid)
-      return 0 unless solid && solid.valid?
+    # Restore broken circles and arcs inside a Group/ComponentInstance.
+    #
+    # Returns a hash: { circles: N, arcs: M, total: N+M }
+    #
+    # min_arc_segments — minimum number of edges in a chain to be considered
+    # an arc. Lower = more aggressive (catches short arcs but may produce
+    # false positives on coincidental L-shapes). Higher = safer.
+    def self.restore_in_solid(solid, min_arc_segments: DEFAULT_MIN_ARC_SEGMENTS)
+      result = { circles: 0, arcs: 0, total: 0 }
+      return result unless solid && solid.valid?
       entities = inner_entities(solid)
-      return 0 unless entities
+      return result unless entities
 
       all_edges = collect_edges_from_entities(entities)
-      return 0 if all_edges.empty?
+      return result if all_edges.empty?
 
       circles_found = 0
+      arcs_found = 0
 
-      # Stage 1 — free edges (no curve association)
+      # Stage 1a — Circles: free edges forming closed chains on a circumcircle
       loose_edges = all_edges.select { |e| e.valid? && e.curve.nil? }
       circles_from_loose = find_circles_by_geometry(loose_edges)
       circles_from_loose.each do |circle_edges|
@@ -45,7 +56,23 @@ module SolidBatch
         end
       end
 
-      # Stage 2 — fragmented Curves (edges already in a Curve, but split)
+      # Stage 1b — Arcs: free edges forming OPEN chains on a circumcircle.
+      # Re-collect entities to ensure stale references from welded circles
+      # don't pollute the loose-edges set.
+      all_edges = collect_edges_from_entities(entities)
+      loose_edges = all_edges.select { |e| e.valid? && e.curve.nil? }
+      arcs_from_loose = find_arcs_by_geometry(loose_edges, min_arc_segments)
+      arcs_from_loose.each do |arc_edges|
+        ctx = find_entities_context(arc_edges.first)
+        if ctx
+          ctx.weld(arc_edges)
+          arcs_found += 1
+        end
+      end
+
+      # Stage 2 — fragmented Curves (edges already in a Curve, but split).
+      # Handles both circles and arcs uniformly via group_by_circle_geometry.
+      all_edges = collect_edges_from_entities(entities)
       curved_edges = all_edges.select { |e| e.valid? && e.curve }
       curve_groups = group_by_circle_geometry(curved_edges)
       curve_groups.each do |group|
@@ -60,7 +87,10 @@ module SolidBatch
         end
       end
 
-      circles_found
+      result[:circles] = circles_found
+      result[:arcs] = arcs_found
+      result[:total] = circles_found + arcs_found
+      result
     end
 
     # ------------------------------------------------------------------
@@ -218,6 +248,112 @@ module SolidBatch
         end
       end
       vertex_count.values.all? { |c| c == 2 }
+    end
+
+    # ------------------------------------------------------------------
+    # Stage 1b — arc detection from free edges via circumcircle
+    # ------------------------------------------------------------------
+
+    # Find arcs (open chains lying on a common circumcircle) among free edges.
+    # Mirrors find_circles_by_geometry but matches OPEN chains instead of closed.
+    def self.find_arcs_by_geometry(edges, min_segments)
+      return [] if edges.empty?
+      return [] if min_segments < 3
+
+      # Build vertex -> edges adjacency (only among given edges)
+      adj = {}
+      edges.each do |e|
+        [e.start, e.end].each do |v|
+          vid = v.entityID
+          adj[vid] ||= []
+          adj[vid] << e
+        end
+      end
+
+      processed = {}
+      arcs = []
+
+      edges.each do |edge|
+        next if processed[edge.entityID]
+
+        all_neighbors = []
+        [edge.start, edge.end].each do |vertex|
+          (adj[vertex.entityID] || []).each do |e|
+            next if e == edge || processed[e.entityID]
+            all_neighbors << { adj_edge: e, shared_vertex: vertex }
+          end
+        end
+        next if all_neighbors.empty?
+
+        found = false
+        all_neighbors.each do |neighbor_info|
+          next if found
+          adj_edge = neighbor_info[:adj_edge]
+          shared_v = neighbor_info[:shared_vertex]
+
+          p2 = shared_v.position
+          p1 = (edge.start == shared_v) ? edge.end.position : edge.start.position
+          p3 = (adj_edge.start == shared_v) ? adj_edge.end.position : adj_edge.start.position
+
+          circle_info = compute_circumcircle(p1, p2, p3)
+          next unless circle_info
+
+          center = circle_info[:center]
+          radius = circle_info[:radius]
+          normal = circle_info[:normal]
+
+          dist_tol = [TOLERANCE, radius * 0.005].max
+
+          matching = edges.select do |e|
+            next false if processed[e.entityID]
+            next false unless e.valid?
+            d1 = (e.start.position.distance(center) - radius).abs
+            d2 = (e.end.position.distance(center) - radius).abs
+            next false unless d1 < dist_tol && d2 < dist_tol
+            v1 = center.vector_to(e.start.position)
+            v2 = center.vector_to(e.end.position)
+            next false if v1.length < 0.001 || v2.length < 0.001
+            v1.normalize!
+            v2.normalize!
+            next false unless v1.dot(normal).abs < 0.01 && v2.dot(normal).abs < 0.01
+            true
+          end
+
+          next if matching.length < min_segments
+          # KEY DIFFERENCE: must be an OPEN chain (arc), not closed (circle).
+          # Closed chains should already have been caught by find_circles_by_geometry.
+          next unless open_chain?(matching)
+
+          matching.each { |e| processed[e.entityID] = true }
+          arcs << matching
+          found = true
+        end
+      end
+
+      arcs
+    end
+
+    # Open chain test for arcs: exactly 2 vertices have degree 1 (endpoints),
+    # and all other vertices have degree 2 (intermediate). Also rejects
+    # branched chains (any vertex with degree > 2).
+    def self.open_chain?(edges)
+      vertex_count = {}
+      edges.each do |edge|
+        [edge.start.entityID, edge.end.entityID].each do |vid|
+          vertex_count[vid] = (vertex_count[vid] || 0) + 1
+        end
+      end
+
+      degree_1 = 0
+      vertex_count.each_value do |count|
+        case count
+        when 1 then degree_1 += 1
+        when 2 then next
+        else return false  # branch — not a simple chain
+        end
+      end
+
+      degree_1 == 2
     end
 
     # ------------------------------------------------------------------

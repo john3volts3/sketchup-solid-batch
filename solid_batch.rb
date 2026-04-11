@@ -7,7 +7,7 @@ module SolidBatch
 
   ext = SketchupExtension.new(PLUGIN_NAME, File.join('solid_batch', 'main'))
   ext.description = 'Batch solid operations using native SketchUp Pro boolean tools'
-  ext.version = '2.1.0'
+  ext.version = '2.2.0'
   ext.creator = 'DRO'
   ext.copyright = '2026'
 

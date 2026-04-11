@@ -18,9 +18,9 @@ When designing technical parts for 3D printing in SketchUp, a common workflow is
 
 - **Combine All (Union)** — Select multiple solids, automatically union all base solids then subtract color-marked objects. Single undo step.
 - **Combine All (Shell)** — Same workflow using Outer Shell instead of Union (merges overlapping volumes into one shell).
-- **Automatic circle restoration** — Native boolean operations break circles into individual segments. Solid Batch detects and welds them back into single-click selectable curves at the end of every Combine All.
+- **Automatic circle and arc restoration** — Native boolean operations break circles and arcs into individual segments. Solid Batch detects and welds them back into single-click selectable curves at the end of every Combine All.
 - **Set Subtract Color** — Pick a color from a selected object to mark which solids should be subtracted during Combine All operations.
-- **Set Repair Options** — Configure the circle restoration behavior: auto-repair toggle and "large object" edge threshold (above which restoration can be skipped for performance).
+- **Set Repair Options** — Configure the circle/arc restoration behavior: auto-repair toggle, "large object" edge threshold (above which restoration can be skipped for performance), and minimum segments for arc detection (tradeoff between catching short arcs and avoiding false positives).
 
 All operations use SketchUp Pro's native boolean engine for maximum reliability.
 
@@ -76,9 +76,9 @@ Lors de la conception de pieces techniques pour l'impression 3D dans SketchUp, u
 
 - **Combine All (Union)** — Selectionnez plusieurs solides, fusionne automatiquement les solides de base puis soustrait les objets marques par couleur. Une seule etape d'annulation.
 - **Combine All (Shell)** — Meme principe avec Outer Shell au lieu de Union (fusionne les volumes en une seule coque).
-- **Restauration automatique des cercles** — Les opérations booléennes natives cassent les cercles en segments individuels. Solid Batch les détecte et les reconstitue en cercles sélectionnables en un clic à la fin de chaque Combine All.
+- **Restauration automatique des cercles et des arcs** — Les opérations booléennes natives cassent les cercles et les arcs en segments individuels. Solid Batch les détecte et les reconstitue en courbes sélectionnables en un clic à la fin de chaque Combine All.
 - **Set Subtract Color** — Choisissez une couleur depuis un objet selectionne pour marquer les solides a soustraire.
-- **Set Repair Options** — Configurer la restauration des cercles : toggle auto-repair et seuil "gros objet" en edges (au-dessus duquel la restauration peut être ignorée pour la performance).
+- **Set Repair Options** — Configurer la restauration des cercles et arcs : toggle auto-repair, seuil "gros objet" en edges (au-dessus duquel la restauration peut être ignorée pour la performance), et nombre minimum de segments pour la détection des arcs (compromis entre détection des arcs courts et évitement des faux positifs).
 
 Toutes les operations utilisent le moteur booleen natif de SketchUp Pro pour une fiabilite maximale.
 

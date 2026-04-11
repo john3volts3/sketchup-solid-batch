@@ -54,6 +54,7 @@ module SolidBatch
   DEFAULT_SUBTRACT_COLOR = [255, 0, 0].freeze
   DEFAULT_AUTO_REPAIR_LARGE = 'Yes'.freeze
   DEFAULT_LARGE_THRESHOLD = 10000
+  DEFAULT_MIN_ARC_SEGMENTS = 8
 
   def self.subtract_color
     r = Sketchup.read_default('SolidBatch', 'subtract_color_r', DEFAULT_SUBTRACT_COLOR[0]).to_i
@@ -82,6 +83,14 @@ module SolidBatch
 
   def self.save_large_threshold(value)
     Sketchup.write_default('SolidBatch', 'large_threshold', value.to_i)
+  end
+
+  def self.min_arc_segments
+    Sketchup.read_default('SolidBatch', 'min_arc_segments', DEFAULT_MIN_ARC_SEGMENTS).to_i
+  end
+
+  def self.save_min_arc_segments(value)
+    Sketchup.write_default('SolidBatch', 'min_arc_segments', value.to_i)
   end
 
   def self.color_match?(c1, c2)
@@ -144,26 +153,41 @@ module SolidBatch
   end
 
   def self.do_set_repair_options
-    prompts = ['Auto-repair circles on large objects', 'Large object threshold (edges)']
-    defaults = [auto_repair_large, large_threshold.to_s]
-    list = ['Yes|No', '']
+    prompts = [
+      'Auto-repair circles on large objects',
+      'Large object threshold (edges)',
+      'Min segments for arc detection',
+    ]
+    defaults = [
+      auto_repair_large,
+      large_threshold.to_s,
+      min_arc_segments.to_s,
+    ]
+    list = ['Yes|No', '', '']
     title = 'Solid Batch — Repair Options'
 
     result = UI.inputbox(prompts, defaults, list, title)
     return unless result
 
     save_auto_repair_large(result[0])
+
     threshold_value = result[1].to_i
     threshold_value = DEFAULT_LARGE_THRESHOLD if threshold_value <= 0
     save_large_threshold(threshold_value)
 
+    arc_segments = result[2].to_i
+    arc_segments = DEFAULT_MIN_ARC_SEGMENTS if arc_segments < 3
+    save_min_arc_segments(arc_segments)
+
     UI.messagebox(
       "Repair options saved:\n\n" \
       "  Auto-repair circles on large objects: #{result[0]}\n" \
-      "  Large object threshold: #{threshold_value} edges\n\n" \
-      "When the result of Combine All exceeds this threshold and " \
-      "auto-repair is set to No, circle restoration is skipped " \
-      "(a message is shown).",
+      "  Large object threshold: #{threshold_value} edges\n" \
+      "  Min segments for arc detection: #{arc_segments}\n\n" \
+      "Lower 'Min segments for arc detection' = catches shorter arcs " \
+      "but may produce false positives. Higher = safer.\n\n" \
+      "When the result of Combine All exceeds the large threshold and " \
+      "auto-repair is set to No, restoration is skipped (a message is shown).",
       MB_OK
     )
   end
@@ -249,7 +273,7 @@ module SolidBatch
         end
       end
 
-      # Phase 3: Circle restoration on the final result
+      # Phase 3: Circle and arc restoration on the final result
       skip_message = nil
       if result&.valid?
         edge_count = CircleRestore.count_edges(result)
@@ -258,20 +282,20 @@ module SolidBatch
         should_restore = (edge_count <= threshold) || repair_large_enabled
 
         if should_restore
-          Sketchup.status_text = "Solid Batch — Restoring circles..."
-          puts "[Solid Batch]   Phase 3: Restoring circles (#{edge_count} edges)..."
+          Sketchup.status_text = "Solid Batch — Restoring circles and arcs..."
+          puts "[Solid Batch]   Phase 3: Restoring circles and arcs (#{edge_count} edges)..."
           model.start_operation(op_name, true, false, !first_op)
           first_op = false
-          restored = CircleRestore.restore_in_solid(result)
+          restored = CircleRestore.restore_in_solid(result, min_arc_segments: min_arc_segments)
           model.commit_operation
-          puts "[Solid Batch]   Phase 3: #{restored} circle(s) restored"
+          puts "[Solid Batch]   Phase 3: #{restored[:circles]} circle(s), #{restored[:arcs]} arc(s) restored"
         else
           puts "[Solid Batch]   Phase 3: Skipped (#{edge_count} edges > #{threshold} threshold)"
           skip_message =
-            "Circle restoration was skipped.\n\n" \
+            "Circle and arc restoration was skipped.\n\n" \
             "The result contains #{edge_count} edges, which exceeds the " \
             "configured threshold of #{threshold}.\n\n" \
-            "To enable repair on large objects, use 'Set Options' and set " \
+            "To enable repair on large objects, use 'Set Repair Options' and set " \
             "'Auto-repair circles on large objects' to Yes."
         end
       end

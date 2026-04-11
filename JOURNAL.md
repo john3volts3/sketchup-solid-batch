@@ -10,6 +10,40 @@
 
 ## Session du 2026-04-11
 
+### Livraison v2.2.0
+
+- **solid_batch/version.rb** — Version `2.1.0` → `2.2.0`
+- **solid_batch.rb** — `ext.version = '2.2.0'`
+- **docs/FSD_FR.md** — Mise à jour EF-04 (nouveau champ min_arc_segments), EF-05 (Phase 3 traite arcs + cercles), section 6 persistance, section 9 history, structure module
+- **docs/FSD_EN.md** — Idem en anglais
+- **docs/USER_MANUAL_FR.md** — Mise à jour Set Repair Options (3e champ), section Phase 3 mentionne arcs
+- **docs/USER_MANUAL_EN.md** — Idem
+- **README.md** — Mise à jour fonctionnalités EN+FR avec arc restoration
+- **build/solid_batch.rbz** — Reconstruit
+- **Plugins SketchUp 2021** — Fichiers copiés (loader, main, version, circle_restore)
+- **Tests utilisateur** — Tous les tests du plan validés (cercles, arcs, mixte, gros objets, undo, faux positifs)
+
+### Restauration automatique des arcs (en plus des cercles) — vers v2.2.0
+
+- **solid_batch/circle_restore.rb** — Extension du module pour gérer aussi les arcs :
+  - Nouvelle constante `DEFAULT_MIN_ARC_SEGMENTS = 8`
+  - `restore_in_solid` accepte maintenant un kwarg `min_arc_segments:` et retourne un hash `{circles:, arcs:, total:}` au lieu d'un entier
+  - Nouveau Stage 1b après le Stage 1a (cercles) : appelle `find_arcs_by_geometry` puis `entities.weld()` chaque arc trouvé
+  - Re-collection des entities entre les stages pour éviter les références obsolètes après les welds
+  - Nouvelle méthode `find_arcs_by_geometry(edges, min_segments)` — miroir de `find_circles_by_geometry`, mais matche les chaînes ouvertes via `open_chain?`
+  - Nouvelle méthode `open_chain?(edges)` — vérifie qu'exactement 2 vertices ont degré 1 (extrémités) et tous les autres ont degré 2 (intermédiaires), refuse les branchements (degré > 2)
+  - Commentaire d'en-tête mis à jour pour mentionner les arcs
+  - Algorithme entièrement basé sur Re-Cercle + API SketchUp publique, aucune dépendance externe
+- **solid_batch/main.rb** — Modifications :
+  - Nouvelle constante `DEFAULT_MIN_ARC_SEGMENTS = 8`
+  - Nouveaux helpers `min_arc_segments` et `save_min_arc_segments` (persistance via `Sketchup.write_default('SolidBatch', 'min_arc_segments', ...)`)
+  - `do_set_repair_options` étendu avec un 3e champ `Min segments for arc detection` dans l'`UI.inputbox` (valeurs < 3 ramenées à `DEFAULT_MIN_ARC_SEGMENTS`)
+  - Messagebox récapitulatif mis à jour avec une brève explication du tradeoff bas/haut
+  - Phase 3 dans `do_combine_all_pro` passe `min_arc_segments:` à `restore_in_solid` et adapte le log/status bar pour mentionner « circles and arcs »
+  - Le hash retourné par `restore_in_solid` est utilisé pour logger `N circle(s), M arc(s) restored`
+- **Plugins SketchUp 2021** — `main.rb` et `circle_restore.rb` copiés vers le dossier Plugins
+- **Pas de bump version ni de livraison** — tests utilisateur en cours avant publication v2.2.0
+
 ### Livraison v2.1.0
 
 - **solid_batch/version.rb** — Version `2.0.0` → `2.1.0`

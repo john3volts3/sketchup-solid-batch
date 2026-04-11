@@ -1,6 +1,6 @@
 # Solid Batch — Functional Specification Document
 
-**Version:** 2.1.0
+**Version:** 2.2.0
 **Date:** 2026-04-11
 **Author:** DRO
 
@@ -18,8 +18,9 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 - Batch subtract of color-marked solid objects from the merged result
 - Persistent color-based identification of subtract objects
 - Single undo step for the entire batch operation
-- Automatic restoration of broken circles on the result (native boolean operations destroy `ArcCurve` associations; the plugin welds matching segments back into single-click selectable circles)
+- Automatic restoration of broken circles AND arcs on the result (native boolean operations destroy `ArcCurve` associations; the plugin welds matching segments back into single-click selectable curves)
 - Configurable threshold to skip restoration on very large objects (performance)
+- Configurable minimum segment count for arc detection (tradeoff between catching short arcs and avoiding false positives)
 
 ### Out of scope
 - Custom boolean engine (removed in v2.0 — plugin relies entirely on native Pro methods)
@@ -81,21 +82,22 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | Field | Description |
 |-------|-------------|
 | **Input** | None (no selection required) |
-| **Process** | Open a `UI.inputbox` with two fields: `Auto-repair circles on large objects` (Yes/No) and `Large object threshold (edges)` (integer). Persist both values to the SketchUp registry. |
-| **Output** | Confirmation messagebox listing both saved values |
-| **Persistence** | Stored under `SolidBatch/auto_repair_large` (string Yes/No) and `SolidBatch/large_threshold` (integer) |
-| **Defaults** | `Yes` and `10000` edges |
+| **Process** | Open a `UI.inputbox` with three fields: `Auto-repair circles on large objects` (Yes/No), `Large object threshold (edges)` (integer), `Min segments for arc detection` (integer ≥ 3). Persist all three values to the SketchUp registry. |
+| **Output** | Confirmation messagebox listing all three saved values + brief explanation of the low/high tradeoff for min arc segments |
+| **Persistence** | Stored under `SolidBatch/auto_repair_large` (string Yes/No), `SolidBatch/large_threshold` (integer), `SolidBatch/min_arc_segments` (integer) |
+| **Defaults** | `Yes`, `10000` edges, `8` segments |
 
-#### FR-05: Automatic Circle Restoration (Phase 3 of Combine All)
+#### FR-05: Automatic Circle AND Arc Restoration (Phase 3 of Combine All)
 
 | Field | Description |
 |-------|-------------|
 | **Input** | The solid resulting from phases 1 and 2 of Combine All |
 | **Precondition** | `result.valid?` |
-| **Process** | 1. Count edges in the result (`CircleRestore.count_edges`). 2. If `edge_count <= threshold` OR `auto_repair_large == 'Yes'` → run `CircleRestore.restore_in_solid` which detects circles via circumcircle geometry and `entities.weld()` segments back into a Curve. 3. Otherwise → show a modal messagebox explaining that the repair was skipped and how to enable it. |
-| **Output** | Circles restored as `Sketchup::Curve` selectable in one click, OR modal messagebox if skipped |
-| **Algorithm** | Adapted from the Re-Cercle plugin (Claude Code, 2026) — 2-stage detection: (1) loose edges grouped by circumcircle then welded, (2) curve fragments grouped by center/radius/normal then welded |
-| **Constants** | `MIN_SEGMENTS = 8`, `TOLERANCE = 0.1` (radius-adaptive) |
+| **Process** | 1. Count edges in the result (`CircleRestore.count_edges`). 2. If `edge_count <= threshold` OR `auto_repair_large == 'Yes'` → run `CircleRestore.restore_in_solid(result, min_arc_segments: <user_setting>)` which first detects circles, then arcs via circumcircle geometry and `entities.weld()` segments back into a Curve. 3. Otherwise → show a modal messagebox explaining that the repair was skipped and how to enable it. |
+| **Output** | Hash `{circles: N, arcs: M, total: N+M}`. Circles and arcs restored as `Sketchup::Curve` selectable in one click, OR modal messagebox if skipped |
+| **Algorithm** | Adapted from the Re-Cercle plugin (Claude Code, 2026) — 3-stage detection: (1a) circles = loose edges in closed chains on a common circumcircle, (1b) arcs = loose edges in open chains on a common circumcircle, (2) curve fragments grouped by center/radius/normal then welded |
+| **Topology** | `closed_chain?` for circles (all vertices degree 2), `open_chain?` for arcs (exactly 2 vertices degree 1, others degree 2, branches rejected) |
+| **Constants** | `MIN_SEGMENTS = 8` (circles + stage 2), `DEFAULT_MIN_ARC_SEGMENTS = 8` (arcs, configurable), `TOLERANCE = 0.1` (radius-adaptive) |
 | **Undo** | Phase 3 chained to the single undo of phases 1/2 via transparent operation |
 
 #### FR-06: Solid Validation
@@ -117,8 +119,9 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | NFR-05 | Graceful error handling with abort + revert on failure |
 | NFR-06 | Status bar progress display during batch operations (`Solid Batch — Subtract 7/13 (54%)`) |
 | NFR-07 | Transparent operations: each boolean step has its own start/commit (fast small deltas) chained via `transparent = true` for single undo |
-| NFR-08 | Circle restoration applied only at the end (Phase 3), never on intermediate steps — for performance and reliability |
-| NFR-09 | The `large_threshold` and `auto_repair_large` toggle persist in the SketchUp registry |
+| NFR-08 | Circle and arc restoration applied only at the end (Phase 3), never on intermediate steps — for performance and reliability |
+| NFR-09 | The `large_threshold`, `auto_repair_large` and `min_arc_segments` settings persist in the SketchUp registry |
+| NFR-10 | Arc detection runs AFTER circle detection so a closed chain isn't falsely split and detected as an arc |
 
 ## 5. Architecture
 
@@ -147,7 +150,7 @@ solid_batch/
 SolidBatch                  # Top-level namespace
   PLUGIN_DIR                  # Plugin directory path
   PLUGIN_NAME                 # "Solid Batch"
-  VERSION                     # "2.1.0"
+  VERSION                     # "2.2.0"
 
   # Color management
   subtract_color()            # Read persisted color
@@ -155,26 +158,33 @@ SolidBatch                  # Top-level namespace
   color_match?(c1, c2)        # Compare two colors by RGB
   is_subtract_solid?(entity)  # Check if entity has subtract color
 
-  # Circle repair options
+  # Circle and arc repair options
   auto_repair_large()         # Read persisted Yes/No toggle
   save_auto_repair_large(v)   # Write toggle to registry
   large_threshold()           # Read persisted edge threshold
   save_large_threshold(v)     # Write threshold to registry
+  min_arc_segments()          # Read persisted min arc segments
+  save_min_arc_segments(v)    # Write min arc segments to registry
 
   # Validation
   get_solids(min_count)        # Filter selection to valid solids
 
   # Commands
-  do_combine_all_pro(mode)    # Batch union/shell + subtract + circle restore
+  do_combine_all_pro(mode)    # Batch union/shell + subtract + circle & arc restore
   do_set_subtract_color()     # Register subtract color
-  do_set_repair_options()     # Configure auto-repair + threshold
+  do_set_repair_options()     # Configure auto-repair + threshold + min arc segments
 
-SolidBatch::CircleRestore   # Circle restoration module
+SolidBatch::CircleRestore   # Circle and arc restoration module
   TOLERANCE                   # 0.1
-  MIN_SEGMENTS                # 8
+  MIN_SEGMENTS                # 8 (circles + stage 2)
+  DEFAULT_MIN_ARC_SEGMENTS    # 8 (arcs, configurable)
   count_edges(solid)          # Recursive edge count
-  restore_in_solid(solid)     # 2-stage restoration, returns # of welded circles
-  # + internal helpers: circumcircle, closed_chain?, group_by_circle_geometry, etc.
+  restore_in_solid(solid, min_arc_segments:)  # Stages 1a + 1b + 2, returns {circles:, arcs:, total:}
+  find_circles_by_geometry(edges)             # Stage 1a (closed chains)
+  find_arcs_by_geometry(edges, min_segments)  # Stage 1b (open chains)
+  closed_chain?(edges)        # All vertices degree 2
+  open_chain?(edges)          # Exactly 2 vertices degree 1, others degree 2
+  # + internal helpers: compute_circumcircle, group_by_circle_geometry, edges_form_circle?, etc.
 ```
 
 ### 5.3 Operation Flow
@@ -207,11 +217,15 @@ Phase 1: sequential union/outer_shell of base solids
   |
   +---> Status bar: "Solid Batch — Subtract 7/13 (54%)"
   |
-  +---> Phase 3: circle restoration on the final result
+  +---> Phase 3: circle AND arc restoration on the final result
   |   edge_count = CircleRestore.count_edges(result)
   |   if edge_count <= threshold OR auto_repair_large == 'Yes':
   |     start_operation(transparent = true)
-  |     CircleRestore.restore_in_solid(result) -> commit
+  |     CircleRestore.restore_in_solid(result, min_arc_segments: ...)
+  |       Stage 1a: weld circles (closed chains)
+  |       Stage 1b: weld arcs (open chains, ≥ min_arc_segments edges)
+  |       Stage 2 : weld pre-existing fragmented Curves
+  |     -> commit
   |   else:
   |     UI.messagebox modal "Repair skipped"
   |
@@ -244,6 +258,7 @@ The plugin uses the following SketchUp Pro Ruby API methods:
 | Subtract color (B) | SketchUp registry | `SolidBatch/subtract_color_b` | 0 |
 | Auto-repair circles on large objects | SketchUp registry | `SolidBatch/auto_repair_large` | `Yes` |
 | "Large object" threshold in edges | SketchUp registry | `SolidBatch/large_threshold` | `10000` |
+| Min segments for arc detection | SketchUp registry | `SolidBatch/min_arc_segments` | `8` |
 
 ## 7. User Interface
 
@@ -285,3 +300,4 @@ All user-facing messages use `UI.messagebox` with `MB_OK`. Error messages includ
 | 1.0.0 | 2026-04-03 | Initial release — custom boolean engine (union, subtract, split) |
 | 2.0.0 | 2026-04-04 | Removed custom engine. Added Combine All (Union/Shell) using native Pro methods. Added Set Subtract Color. Removed Union, Subtract, Split individual operations. Transparent operations for fast commits + single undo. Status bar progress display. |
 | 2.1.0 | 2026-04-11 | Added Phase 3: automatic restoration of broken circles on the result (`CircleRestore` module adapted from Re-Cercle). Added `Set Repair Options` command to configure threshold and auto-repair toggle. Persistence of new options. New `repair_circles_*.png` icon. |
+| 2.2.0 | 2026-04-11 | Phase 3 extended: automatic restoration of **arcs** in addition to circles via `find_arcs_by_geometry` + `open_chain?`. New `Min segments for arc detection` parameter configurable in `Set Repair Options` (default 8). `restore_in_solid` now returns `{circles:, arcs:, total:}`. Stage 1b inserted between circles and pre-existing curve fragments. |

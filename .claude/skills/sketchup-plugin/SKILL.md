@@ -187,7 +187,7 @@ Quand l'utilisateur demande une **livraison** (ou dit "livraison"), executer sys
 
 1. Apres copie du fichier dans `.claude/skills/.../SKILL.md` (ou autre destination dans le repo), rechercher les patterns sensibles :
    ```
-   grep -E "C:/Users/<nom>|Users/|192\.168|<github_user>|@gmail|@hotmail|P:/develop" path/to/file
+   grep -E "C:/Users/<nom>|Users/|192\.168|<github_user>|@gmail|@hotmail|<drive>:/<dev_folder>" path/to/file
    ```
 2. Remplacer chaque chemin en dur par un placeholder portable :
    - `C:/Users/<nom>/AppData/Roaming/SketchUp/SketchUp 2021/SketchUp/Plugins/` → `%APPDATA%/SketchUp/SketchUp <version>/SketchUp/Plugins/`
@@ -202,7 +202,7 @@ Quand l'utilisateur demande une **livraison** (ou dit "livraison"), executer sys
 - Chemins reseau internes (`\\192.168.`, `192.168.`)
 - Identifiant GitHub/Git
 - Patterns d'email (`@gmail`, `@hotmail`, `@outlook`)
-- Chemins absolus personnels (`P:/develop/`, `D:/projets/`, repertoire home complet)
+- Chemins absolus personnels (chemins de developpement avec lettre de lecteur, repertoire home complet)
 
 **Important :**
 

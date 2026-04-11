@@ -23,7 +23,7 @@ Merges all selected solids into one, using native `union` for base solids and na
    - **Tool solids** — all solids that DO have the subtract color
 2. **Phase 1 (Union):** Merges all base solids into one using sequential `union` calls. If there is only one base solid, this phase is skipped.
 3. **Phase 2 (Subtract):** Subtracts each tool solid from the merged base, one by one.
-4. **Phase 3 (Circle restoration):** Detects circles broken by the native boolean operations and restores them as `Sketchup::Curve` selectable in a single click. This phase can be disabled for very large objects via **Set Repair Options**.
+4. **Phase 3 (Circle AND arc restoration):** Detects circles AND arcs broken by the native boolean operations and restores them as `Sketchup::Curve` selectable in a single click. This phase can be disabled for very large objects via **Set Repair Options**.
 5. The entire operation is wrapped in a single undo step.
 
 **When to use:** When you want to merge solids while preserving internal voids (e.g., merging walls that have window openings).
@@ -51,18 +51,33 @@ Registers a color to identify which solids should be subtracted during Combine A
 
 ### Set Repair Options
 
-Configures the **Phase 3** behavior (automatic circle restoration) at the end of Combine All operations.
+Configures the **Phase 3** behavior (automatic circle AND arc restoration) at the end of Combine All operations.
 
-**Why it matters:** SketchUp Pro's native boolean operations break the `ArcCurve` association of circles: a circle becomes a series of small individual segments that you'd otherwise have to click one by one. Phase 3 detects these segments and welds them back into a single-click selectable `Curve`. On very large objects (tens of thousands of edges), this detection can take several seconds; this option lets you skip it in that case.
+**Why it matters:** SketchUp Pro's native boolean operations break the `ArcCurve` association of both circles and arcs: a circle or an arc becomes a series of small individual segments that you'd otherwise have to click one by one. Phase 3 detects these segments and welds them back into a single-click selectable `Curve`. On very large objects (tens of thousands of edges), this detection can take several seconds; this option lets you skip it in that case.
 
 **How to use:**
 1. Click **Set Repair Options** (no selection required)
-2. A dialog opens with two fields:
+2. A dialog opens with three fields:
    - **Auto-repair circles on large objects** (Yes/No): if `Yes`, restoration always runs, even on large objects; if `No`, it is skipped above the threshold and a message warns you
    - **Large object threshold (edges)**: number of edges above which an object is considered "large"
+   - **Min segments for arc detection**: minimum number of segments for a chain of edges to be considered an arc. Lower = catches shorter arcs but risks false positives. Higher = safer but may miss short arcs.
 3. Click **OK** — values are remembered across sessions
 
-**Defaults:** Auto-repair = `Yes`, Threshold = `10000` edges
+**Defaults:** Auto-repair = `Yes`, Threshold = `10000` edges, Min arc segments = `8`
+
+**Choosing `Min segments for arc detection`:**
+
+The default of `8` is conservative — it avoids false positives (3-4 edges in an angle that would happen to fit a quarter circle) but may miss short arcs. Some reference points:
+
+| Arc type | Segments | Detected with threshold = 8? |
+|----------|----------|------------------------------|
+| 360° with 24 segments (refined native circle) | 24 | ✓ |
+| 270° with 12 segments (default native arc) | 9 | ✓ |
+| 180° with 12 segments | 6 | ✗ — lower threshold to 6 or less |
+| 90° with 12 segments | 3 | ✗ — false positive risk if threshold ≤ 3 |
+| 90° with 24 segments | 6 | ✗ — lower threshold to 6 or less |
+
+If you work with many short arcs (≤ 6 segments), lower the threshold to `4` or `5`. If you see false positives (right-angle corners turned into arcs), raise back to `8` or higher.
 
 **Phase 3 decision (summary):**
 
@@ -110,10 +125,10 @@ Configures the **Phase 3** behavior (automatic circle restoration) at the end of
 
 | Icon | Command | Description |
 |------|---------|-------------|
-| Combine Union | Combine All (Union) | Native union + subtract + circle restoration |
-| Combine Shell | Combine All (Shell) | Native outer shell + subtract + circle restoration |
+| Combine Union | Combine All (Union) | Native union + subtract + circle & arc restoration |
+| Combine Shell | Combine All (Shell) | Native outer shell + subtract + circle & arc restoration |
 | Set Color | Set Subtract Color | Pick color from selection |
-| Circle ✓ | Set Repair Options | Configure auto-repair and edge threshold |
+| Circle ✓ | Set Repair Options | Configure auto-repair, edge threshold, min arc segments |
 
 ## Troubleshooting
 
