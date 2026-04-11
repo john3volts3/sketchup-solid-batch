@@ -174,4 +174,38 @@ Quand l'utilisateur demande une **livraison** (ou dit "livraison"), executer sys
 4. Reconstruire le `.rbz` dans `build/`
 5. Copier les fichiers modifies dans le dossier plugins SketchUp (`%APPDATA%/SketchUp/SketchUp <version>/SketchUp/Plugins/` sur Windows)
 6. Copier ce skill dans le repository (`.claude/skills/sketchup-plugin/SKILL.md`) et le mettre a jour si des directives ont evolue durant la session
-7. Commit et push (en utilisant la methode PowerShell pour le git sur NAS)
+7. **SANITISER la copie du skill** dans `.claude/skills/sketchup-plugin/SKILL.md` avant tout `git add` — voir section 11 ci-dessous
+8. Commit et push (en utilisant la methode PowerShell pour le git sur NAS)
+
+## 11. Sanitisation des fichiers copies depuis l'environnement personnel
+
+**REGLE OBLIGATOIRE** — Avant de committer dans un repo (surtout public/GitHub) un fichier copie depuis le dossier personnel de l'utilisateur (`~/.claude/`, `C:/Users/<nom>/`, etc.), **toujours** rechercher et remplacer les informations personnelles.
+
+**Pourquoi :** Les skills globaux et autres fichiers de config personnels contiennent souvent des chemins en dur avec le nom d'utilisateur Windows, des chemins reseau internes, des identifiants Git, etc. Committer ces fichiers tels quels fuite ces informations dans le repo public.
+
+**Procedure :**
+
+1. Apres copie du fichier dans `.claude/skills/.../SKILL.md` (ou autre destination dans le repo), rechercher les patterns sensibles :
+   ```
+   grep -E "C:/Users/<nom>|Users/|192\.168|<github_user>|@gmail|@hotmail|P:/develop" path/to/file
+   ```
+2. Remplacer chaque chemin en dur par un placeholder portable :
+   - `C:/Users/<nom>/AppData/Roaming/SketchUp/SketchUp 2021/SketchUp/Plugins/` → `%APPDATA%/SketchUp/SketchUp <version>/SketchUp/Plugins/`
+   - Ajouter une variante macOS si pertinent : `~/Library/Application Support/SketchUp <version>/SketchUp/Plugins/`
+   - Chemins reseau (`\\192.168.x.x\...`) → description generique
+3. Re-grep apres sanitisation pour confirmer qu'il ne reste rien.
+4. **Seulement apres** : `git add` puis commit.
+
+**Liste defensive a verifier (non exhaustive) :**
+
+- Nom d'utilisateur Windows (`C:/Users/<nom>`)
+- Chemins reseau internes (`\\192.168.`, `192.168.`)
+- Identifiant GitHub/Git
+- Patterns d'email (`@gmail`, `@hotmail`, `@outlook`)
+- Chemins absolus personnels (`P:/develop/`, `D:/projets/`, repertoire home complet)
+
+**Important :**
+
+- **Ne JAMAIS modifier le skill global** dans `~/.claude/skills/`. La copie locale peut conserver les chemins en dur (elle reste sur la machine de dev). Seule la copie dans le repo doit etre sanitisee.
+- Cette regle s'applique a **tout fichier** copie depuis l'environnement personnel vers le repo, pas seulement SKILL.md.
+- Si un check post-sanitisation revele encore une fuite, **ne pas commit** et corriger d'abord.
