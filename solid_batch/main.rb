@@ -1,4 +1,5 @@
 require_relative 'version'
+require_relative 'circle_restore'
 
 module SolidBatch
   unless @loaded
@@ -8,6 +9,7 @@ module SolidBatch
     submenu.add_item('Combine All (Shell)') { self.do_combine_all_pro(:outer_shell) }
     submenu.add_separator
     submenu.add_item('Set Subtract Color') { self.do_set_subtract_color }
+    submenu.add_item('Set Repair Options') { self.do_set_repair_options }
 
     toolbar = UI::Toolbar.new(PLUGIN_NAME)
 
@@ -31,14 +33,27 @@ module SolidBatch
     cmd_setcolor.large_icon = File.join(icons_dir, 'setcolor_24.png')
     toolbar.add_item(cmd_setcolor)
 
-    toolbar.show
+    cmd_repairopts = UI::Command.new('Set Repair Options') { self.do_set_repair_options }
+    cmd_repairopts.tooltip = 'Set Repair Options — circle restoration threshold'
+    cmd_repairopts.small_icon = File.join(icons_dir, 'repair_circles_16.png')
+    cmd_repairopts.large_icon = File.join(icons_dir, 'repair_circles_24.png')
+    toolbar.add_item(cmd_repairopts)
+
+    if toolbar.get_last_state == TB_VISIBLE
+      toolbar.restore
+      toolbar.show
+    else
+      toolbar.show
+    end
     @loaded = true
   end
 
   # -------------------------------------------------------------------
-  # Subtract color management (persisted across sessions)
+  # Options management (persisted across sessions)
   # -------------------------------------------------------------------
   DEFAULT_SUBTRACT_COLOR = [255, 0, 0].freeze
+  DEFAULT_AUTO_REPAIR_LARGE = 'Yes'.freeze
+  DEFAULT_LARGE_THRESHOLD = 10000
 
   def self.subtract_color
     r = Sketchup.read_default('SolidBatch', 'subtract_color_r', DEFAULT_SUBTRACT_COLOR[0]).to_i
@@ -51,6 +66,22 @@ module SolidBatch
     Sketchup.write_default('SolidBatch', 'subtract_color_r', color.red)
     Sketchup.write_default('SolidBatch', 'subtract_color_g', color.green)
     Sketchup.write_default('SolidBatch', 'subtract_color_b', color.blue)
+  end
+
+  def self.auto_repair_large
+    Sketchup.read_default('SolidBatch', 'auto_repair_large', DEFAULT_AUTO_REPAIR_LARGE).to_s
+  end
+
+  def self.save_auto_repair_large(value)
+    Sketchup.write_default('SolidBatch', 'auto_repair_large', value.to_s)
+  end
+
+  def self.large_threshold
+    Sketchup.read_default('SolidBatch', 'large_threshold', DEFAULT_LARGE_THRESHOLD).to_i
+  end
+
+  def self.save_large_threshold(value)
+    Sketchup.write_default('SolidBatch', 'large_threshold', value.to_i)
   end
 
   def self.color_match?(c1, c2)
@@ -108,6 +139,31 @@ module SolidBatch
     UI.messagebox(
       "Subtract color set to RGB(#{color.red}, #{color.green}, #{color.blue}).\n" \
       "Objects with this color will be subtracted when using Combine All.",
+      MB_OK
+    )
+  end
+
+  def self.do_set_repair_options
+    prompts = ['Auto-repair circles on large objects', 'Large object threshold (edges)']
+    defaults = [auto_repair_large, large_threshold.to_s]
+    list = ['Yes|No', '']
+    title = 'Solid Batch — Repair Options'
+
+    result = UI.inputbox(prompts, defaults, list, title)
+    return unless result
+
+    save_auto_repair_large(result[0])
+    threshold_value = result[1].to_i
+    threshold_value = DEFAULT_LARGE_THRESHOLD if threshold_value <= 0
+    save_large_threshold(threshold_value)
+
+    UI.messagebox(
+      "Repair options saved:\n\n" \
+      "  Auto-repair circles on large objects: #{result[0]}\n" \
+      "  Large object threshold: #{threshold_value} edges\n\n" \
+      "When the result of Combine All exceeds this threshold and " \
+      "auto-repair is set to No, circle restoration is skipped " \
+      "(a message is shown).",
       MB_OK
     )
   end
@@ -193,10 +249,39 @@ module SolidBatch
         end
       end
 
+      # Phase 3: Circle restoration on the final result
+      skip_message = nil
+      if result&.valid?
+        edge_count = CircleRestore.count_edges(result)
+        threshold = large_threshold
+        repair_large_enabled = (auto_repair_large == 'Yes')
+        should_restore = (edge_count <= threshold) || repair_large_enabled
+
+        if should_restore
+          Sketchup.status_text = "Solid Batch — Restoring circles..."
+          puts "[Solid Batch]   Phase 3: Restoring circles (#{edge_count} edges)..."
+          model.start_operation(op_name, true, false, !first_op)
+          first_op = false
+          restored = CircleRestore.restore_in_solid(result)
+          model.commit_operation
+          puts "[Solid Batch]   Phase 3: #{restored} circle(s) restored"
+        else
+          puts "[Solid Batch]   Phase 3: Skipped (#{edge_count} edges > #{threshold} threshold)"
+          skip_message =
+            "Circle restoration was skipped.\n\n" \
+            "The result contains #{edge_count} edges, which exceeds the " \
+            "configured threshold of #{threshold}.\n\n" \
+            "To enable repair on large objects, use 'Set Options' and set " \
+            "'Auto-repair circles on large objects' to Yes."
+        end
+      end
+
       model.selection.clear
       model.selection.add(result) if result&.valid?
       Sketchup.status_text = "Solid Batch — Done (#{total_steps} operations)"
       puts "[Solid Batch] Combine All (#{mode_label}) done."
+
+      UI.messagebox(skip_message, MB_OK) if skip_message
     rescue => e
       model.abort_operation
       puts "[Solid Batch] Combine All error: #{e.message}"

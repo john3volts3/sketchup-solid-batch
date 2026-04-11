@@ -1,7 +1,7 @@
 # Solid Batch — Specification Fonctionnelle Detaillee
 
-**Version :** 2.0.0
-**Date :** 2026-04-04
+**Version :** 2.1.0
+**Date :** 2026-04-11
 **Auteur :** DRO
 
 ---
@@ -18,6 +18,8 @@ Solid Batch est un plugin SketchUp Pro qui permet d'effectuer des operations boo
 - Soustraction par lot des objets solides marques par couleur depuis le resultat fusionne
 - Identification persistante par couleur des objets a soustraire
 - Etape d'annulation unique pour toute l'operation par lot
+- Restauration automatique des cercles cassés sur le résultat (les opérations booléennes natives détruisent les `ArcCurve` ; le plugin reweld les segments en cercles sélectionnables en un clic)
+- Seuil configurable pour désactiver la restauration sur les très gros objets (performance)
 
 ### Exclu
 - Moteur booleen custom (supprime en v2.0 — le plugin repose entierement sur les methodes natives Pro)
@@ -74,7 +76,29 @@ Solid Batch est un plugin SketchUp Pro qui permet d'effectuer des operations boo
 | **Persistance** | La couleur est stockee dans le registre SketchUp sous le namespace `SolidBatch` ; survit au redemarrage de l'application |
 | **Defaut** | Rouge (255, 0, 0) si aucune couleur n'a ete definie |
 
-#### EF-04 : Validation des solides
+#### EF-04 : Set Repair Options
+
+| Champ | Description |
+|-------|-------------|
+| **Entree** | Aucune sélection requise |
+| **Traitement** | Ouvre une `UI.inputbox` avec deux champs : `Auto-repair circles on large objects` (Yes/No) et `Large object threshold (edges)` (entier). Persiste les deux valeurs dans le registre SketchUp. |
+| **Sortie** | Messagebox récapitulatif des deux valeurs sauvegardées |
+| **Persistance** | Stockage sous `SolidBatch/auto_repair_large` (string Yes/No) et `SolidBatch/large_threshold` (entier) |
+| **Defauts** | `Yes` et `10000` edges |
+
+#### EF-05 : Restauration automatique des cercles (Phase 3 de Combine All)
+
+| Champ | Description |
+|-------|-------------|
+| **Entree** | Le solide résultant des phases 1 et 2 de Combine All |
+| **Precondition** | `result.valid?` |
+| **Traitement** | 1. Compter les edges du résultat (`CircleRestore.count_edges`). 2. Si `edge_count <= threshold` OU `auto_repair_large == 'Yes'` → exécuter `CircleRestore.restore_in_solid` qui détecte les cercles par circumcircle et `entities.weld()` les segments en Curve. 3. Sinon → afficher une messagebox modale expliquant que la réparation est ignorée et comment l'activer. |
+| **Sortie** | Cercles reconstitués comme `Sketchup::Curve` sélectionnables en un clic, OU messagebox modale si skippé |
+| **Algorithme** | Adapté du plugin Re-Cercle (Claude Code, 2026) — détection en 2 étapes : (1) edges libres groupés par circumcircle puis weld, (2) fragments de Curves regroupés par centre/rayon/normale puis weld |
+| **Constantes** | `MIN_SEGMENTS = 8`, `TOLERANCE = 0.1` (adaptative selon le rayon) |
+| **Annulation** | Phase 3 chaînée à l'undo unique des phases 1/2 via opération transparente |
+
+#### EF-06 : Validation des solides
 
 | Champ | Description |
 |-------|-------------|
@@ -93,16 +117,19 @@ Solid Batch est un plugin SketchUp Pro qui permet d'effectuer des operations boo
 | ENF-05 | Gestion d'erreur gracieuse avec abandon + annulation en cas d'echec |
 | ENF-06 | Affichage de la progression dans la barre de statut pendant les operations batch (`Solid Batch — Subtract 7/13 (54%)`) |
 | ENF-07 | Operations transparentes : chaque etape booleenne a son propre start/commit (petits deltas rapides) chainees via `transparent = true` pour un seul undo |
+| ENF-08 | Restauration des cercles applicable uniquement à la fin (Phase 3), jamais à chaque étape intermédiaire — performance et fiabilité |
+| ENF-09 | Le seuil `large_threshold` et le toggle `auto_repair_large` persistent dans le registre SketchUp |
 
 ## 5. Architecture
 
 ### 5.1 Structure des fichiers
 
 ```
-solid_batch.rb              # Point d'entree — enregistrement de l'extension
+solid_batch.rb                # Point d'entree — enregistrement de l'extension
 solid_batch/
   version.rb                  # Constante VERSION
   main.rb                     # Menu, toolbar, commandes, logique metier
+  circle_restore.rb           # Module CircleRestore — restauration des cercles
   icons/
     combine_pro_union_16.png  # Icones toolbar (16px et 24px)
     combine_pro_union_24.png
@@ -110,6 +137,8 @@ solid_batch/
     combine_pro_shell_24.png
     setcolor_16.png
     setcolor_24.png
+    repair_circles_16.png     # Nouvelle icône Set Repair Options
+    repair_circles_24.png
 ```
 
 ### 5.2 Structure du module
@@ -118,7 +147,7 @@ solid_batch/
 SolidBatch                  # Namespace principal
   PLUGIN_DIR                  # Chemin du repertoire du plugin
   PLUGIN_NAME                 # "Solid Batch"
-  VERSION                     # "2.0.0"
+  VERSION                     # "2.1.0"
 
   # Gestion des couleurs
   subtract_color()            # Lire la couleur persistee
@@ -126,12 +155,26 @@ SolidBatch                  # Namespace principal
   color_match?(c1, c2)        # Comparer deux couleurs par RGB
   is_subtract_solid?(entity)  # Verifier si l'entite a la couleur de soustraction
 
+  # Options de réparation des cercles
+  auto_repair_large()         # Lire le toggle Yes/No persisté
+  save_auto_repair_large(v)   # Écrire le toggle dans le registre
+  large_threshold()           # Lire le seuil edges persisté
+  save_large_threshold(v)     # Écrire le seuil dans le registre
+
   # Validation
   get_solids(min_count)        # Filtrer la selection aux solides valides
 
   # Commandes
-  do_combine_all_pro(mode)    # Union/shell + soustraction par lot
+  do_combine_all_pro(mode)    # Union/shell + soustraction par lot + restauration cercles
   do_set_subtract_color()     # Enregistrer la couleur de soustraction
+  do_set_repair_options()     # Configurer auto-repair + seuil
+
+SolidBatch::CircleRestore   # Module de restauration des cercles
+  TOLERANCE                   # 0.1
+  MIN_SEGMENTS                # 8
+  count_edges(solid)          # Compte récursif des edges
+  restore_in_solid(solid)     # Restauration en 2 étapes, retourne nb cercles welded
+  # + helpers internes : circumcircle, closed_chain?, group_by_circle_geometry, etc.
 ```
 
 ### 5.3 Flux d'operation
@@ -164,6 +207,14 @@ Phase 1 : union/outer_shell sequentiel des solides de base
   |
   +---> Barre de statut : "Solid Batch — Subtract 7/13 (54%)"
   |
+  +---> Phase 3 : restauration des cercles sur le résultat final
+  |   edge_count = CircleRestore.count_edges(result)
+  |   si edge_count <= threshold OU auto_repair_large == 'Yes' :
+  |     start_operation(transparent = true)
+  |     CircleRestore.restore_in_solid(result) -> commit
+  |   sinon :
+  |     UI.messagebox modale "Repair skipped"
+  |
   v
 Toutes les etapes chainees via operations transparentes → un seul Ctrl+Z
   |
@@ -191,6 +242,8 @@ Le plugin utilise les methodes suivantes de l'API Ruby SketchUp Pro :
 | Couleur de soustraction (R) | Registre SketchUp | `SolidBatch/subtract_color_r` | 255 |
 | Couleur de soustraction (G) | Registre SketchUp | `SolidBatch/subtract_color_g` | 0 |
 | Couleur de soustraction (B) | Registre SketchUp | `SolidBatch/subtract_color_b` | 0 |
+| Auto-repair circles on large objects | Registre SketchUp | `SolidBatch/auto_repair_large` | `Yes` |
+| Seuil "gros objet" en edges | Registre SketchUp | `SolidBatch/large_threshold` | `10000` |
 
 ## 7. Interface utilisateur
 
@@ -201,13 +254,15 @@ Situe dans **Extensions > Solid Batch** :
 2. Combine All (Shell)
 3. *(separateur)*
 4. Set Subtract Color
+5. Set Repair Options
 
 ### 7.2 Barre d'outils
 
-Nommee "Solid Batch", contient 3 boutons avec des variantes d'icones 16px et 24px :
+Nommee "Solid Batch", contient 4 boutons avec des variantes d'icones 16px et 24px :
 1. Combine All (Union)
 2. Combine All (Shell)
 3. Set Subtract Color
+4. Set Repair Options
 
 ### 7.3 Messages
 
@@ -229,3 +284,4 @@ Tous les messages utilisateur utilisent `UI.messagebox` avec `MB_OK`. Les messag
 |---------|------|-------------|
 | 1.0.0 | 2026-04-03 | Version initiale — moteur booleen custom (union, subtract, split) |
 | 2.0.0 | 2026-04-04 | Suppression du moteur custom. Ajout Combine All (Union/Shell) utilisant les methodes natives Pro. Ajout Set Subtract Color. Suppression des operations individuelles Union, Subtract, Split. Operations transparentes pour commits rapides + undo unique. Affichage progression dans la barre de statut. |
+| 2.1.0 | 2026-04-11 | Ajout Phase 3 : restauration automatique des cercles cassés sur le résultat (module `CircleRestore` adapté de Re-Cercle). Ajout commande `Set Repair Options` pour configurer le seuil et le toggle auto-repair. Persistance des nouvelles options. Nouvelle icône `repair_circles_*.png`. |

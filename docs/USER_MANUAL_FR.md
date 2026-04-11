@@ -4,7 +4,7 @@
 
 Solid Batch est un plugin SketchUp Pro qui effectue des operations booleennes par lot sur plusieurs solides en un seul clic. Il utilise le moteur booleen natif de SketchUp Pro pour des resultats fiables.
 
-Le plugin fournit trois commandes accessibles via le menu **Extensions > Solid Batch** et la barre d'outils **Solid Batch**.
+Le plugin fournit quatre commandes accessibles via le menu **Extensions > Solid Batch** et la barre d'outils **Solid Batch**.
 
 ## Prerequis
 
@@ -23,7 +23,8 @@ Fusionne tous les solides selectionnes en un seul, en utilisant `union` natif po
    - **Solides-outils** — tous les solides qui ONT la couleur de soustraction
 2. **Phase 1 (Union) :** Fusionne tous les solides de base en un seul par appels sequentiels a `union`. S'il n'y a qu'un seul solide de base, cette phase est ignoree.
 3. **Phase 2 (Subtract) :** Soustrait chaque solide-outil du solide fusionne, un par un.
-4. L'operation entiere est encapsulee dans une seule etape d'annulation.
+4. **Phase 3 (Restauration des cercles) :** Détecte les cercles cassés par les opérations booléennes natives et les reconstitue en `Sketchup::Curve` sélectionnables en un clic. Cette phase peut être désactivée pour les très gros objets via **Set Repair Options**.
+5. L'operation entiere est encapsulee dans une seule etape d'annulation.
 
 **Quand l'utiliser :** Quand vous voulez fusionner des solides en preservant les vides internes (ex. fusion de murs avec des ouvertures de fenetres).
 
@@ -47,6 +48,29 @@ Enregistre une couleur pour identifier les solides a soustraire lors des operati
 3. La couleur est sauvegardee et persiste entre les sessions SketchUp
 
 **Couleur par defaut :** Rouge (RGB 255, 0, 0)
+
+### Set Repair Options
+
+Configure le comportement de la **Phase 3** (restauration automatique des cercles) à la fin des opérations Combine All.
+
+**Pourquoi c'est utile :** Les opérations booléennes natives de SketchUp Pro cassent les associations `ArcCurve` des cercles : un cercle d'origine devient une suite de petits segments individuels qu'on doit cliquer un par un. La Phase 3 détecte ces segments et les regroupe en `Curve` sélectionnable en un clic. Sur les très gros objets (plusieurs dizaines de milliers d'edges), cette détection peut prendre plusieurs secondes ; l'option permet de la désactiver dans ce cas.
+
+**Comment l'utiliser :**
+1. Cliquez sur **Set Repair Options** (aucune sélection requise)
+2. Une fenêtre s'ouvre avec deux champs :
+   - **Auto-repair circles on large objects** (Yes/No) : si `Yes`, la restauration s'exécute toujours, même sur les gros objets ; si `No`, elle est ignorée au-dessus du seuil et un message vous prévient
+   - **Large object threshold (edges)** : nombre d'edges à partir duquel un objet est considéré comme « gros »
+3. Cliquez **OK** — les valeurs sont mémorisées pour les futures sessions
+
+**Valeurs par défaut :** Auto-repair = `Yes`, Threshold = `10000` edges
+
+**Décision Phase 3 (résumé) :**
+
+| Cas | Action |
+|-----|--------|
+| Résultat ≤ seuil | Restauration toujours exécutée |
+| Résultat > seuil ET auto-repair = Yes | Restauration exécutée |
+| Résultat > seuil ET auto-repair = No | Restauration ignorée + message modal |
 
 ## Flux de travail
 
@@ -86,9 +110,10 @@ Enregistre une couleur pour identifier les solides a soustraire lors des operati
 
 | Icone | Commande | Description |
 |-------|----------|-------------|
-| Combine Union | Combine All (Union) | Union native + soustraction |
-| Combine Shell | Combine All (Shell) | Outer shell native + soustraction |
+| Combine Union | Combine All (Union) | Union native + soustraction + restauration cercles |
+| Combine Shell | Combine All (Shell) | Outer shell native + soustraction + restauration cercles |
 | Set Color | Set Subtract Color | Choix couleur depuis la selection |
+| Cercle ✓ | Set Repair Options | Configurer auto-repair et seuil edges |
 
 ## Resolution de problemes
 

@@ -8,6 +8,45 @@
 
 ---
 
+## Session du 2026-04-11
+
+### Livraison v2.1.0
+
+- **solid_batch/version.rb** — Version `2.0.0` → `2.1.0`
+- **solid_batch.rb** — `ext.version = '2.1.0'`
+- **docs/FSD_FR.md** — Ajout EF-04 (circle restoration), EF-05 (Set Repair Options), ENF-08, mise à jour flow + version history
+- **docs/FSD_EN.md** — Idem en anglais
+- **docs/USER_MANUAL_FR.md** — Ajout commande `Set Repair Options`, section circle restoration, nouvelle icône
+- **docs/USER_MANUAL_EN.md** — Idem
+- **README.md** — Mise à jour fonctionnalités EN+FR avec circle restoration
+- **build/solid_batch.rbz** — Reconstruit
+- **Plugins SketchUp 2021** — Fichiers copiés (loader, main, version, circle_restore, icônes)
+- **.claude/skills/sketchup-plugin/SKILL.md** — Copie du skill global dans le repo
+
+### Restauration automatique des cercles après opérations booléennes
+
+- **solid_batch/circle_restore.rb** — **Création** — Module `SolidBatch::CircleRestore` adapté du plugin Re-Cercle :
+  - `count_edges(solid)` — compte récursif des edges dans un Group/ComponentInstance (entre dans les groupes/composants imbriqués)
+  - `restore_in_solid(solid)` — point d'entrée principal, applique l'algorithme en 2 étapes (edges libres via circumcircle + fragments de Curves regroupés) et retourne le nombre de cercles restaurés
+  - Utilise `entities.weld()` (SketchUp 2020.1+)
+  - Constantes : `TOLERANCE = 0.1`, `MIN_SEGMENTS = 8`
+  - Pas de menu/toolbar, pas de start_operation interne, pas de UI.messagebox interne — méthodes utilitaires pures pour usage par le caller
+- **solid_batch/main.rb** — Modifications :
+  - Ajout `require_relative 'circle_restore'`
+  - `do_set_subtract_color` conservé tel quel (capture la couleur depuis la sélection — comportement initial inchangé)
+  - **Nouveau** menu item `'Set Repair Options'` + nouveau bouton toolbar (icône `setcolor` réutilisée temporairement)
+  - **Nouvelle** méthode `do_set_repair_options` : ouvre `UI.inputbox` avec 2 champs (`Auto-repair circles on large objects` Yes/No, `Large object threshold (edges)` entier), persistance via `Sketchup.write_default` sous `SolidBatch/auto_repair_large` et `SolidBatch/large_threshold`, messagebox récapitulatif
+  - Nouveaux helpers : `auto_repair_large`, `save_auto_repair_large`, `large_threshold`, `save_large_threshold`
+  - Nouvelles constantes : `DEFAULT_AUTO_REPAIR_LARGE = 'Yes'`, `DEFAULT_LARGE_THRESHOLD = 10000`
+  - **Phase 3** ajoutée à `do_combine_all_pro`, après la phase 2 de soustraction :
+    - Compte les edges du résultat via `CircleRestore.count_edges`
+    - Si `edge_count <= threshold` OU `auto_repair_large == 'Yes'` → exécute `CircleRestore.restore_in_solid` dans une opération transparente chaînée à l'undo unique
+    - Sinon → affiche une `UI.messagebox` modale expliquant que la réparation a été ignorée et comment l'activer
+    - Status bar : `Solid Batch — Restoring circles...`
+    - Logs console : `[Solid Batch]   Phase 3: N circle(s) restored` ou `Skipped`
+
+---
+
 ## Session du 2026-04-04 (5)
 
 ### Livraison — mise à jour documentation

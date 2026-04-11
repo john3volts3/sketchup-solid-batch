@@ -4,7 +4,7 @@
 
 Solid Batch is a SketchUp Pro plugin that performs batch boolean operations on multiple solids in a single click. It uses SketchUp Pro's native boolean engine for reliable results.
 
-The plugin provides three commands accessible via the **Extensions > Solid Batch** menu and the **Solid Batch** toolbar.
+The plugin provides four commands accessible via the **Extensions > Solid Batch** menu and the **Solid Batch** toolbar.
 
 ## Requirements
 
@@ -23,7 +23,8 @@ Merges all selected solids into one, using native `union` for base solids and na
    - **Tool solids** — all solids that DO have the subtract color
 2. **Phase 1 (Union):** Merges all base solids into one using sequential `union` calls. If there is only one base solid, this phase is skipped.
 3. **Phase 2 (Subtract):** Subtracts each tool solid from the merged base, one by one.
-4. The entire operation is wrapped in a single undo step.
+4. **Phase 3 (Circle restoration):** Detects circles broken by the native boolean operations and restores them as `Sketchup::Curve` selectable in a single click. This phase can be disabled for very large objects via **Set Repair Options**.
+5. The entire operation is wrapped in a single undo step.
 
 **When to use:** When you want to merge solids while preserving internal voids (e.g., merging walls that have window openings).
 
@@ -47,6 +48,29 @@ Registers a color to identify which solids should be subtracted during Combine A
 3. The color is saved and persists across SketchUp sessions
 
 **Default color:** Red (RGB 255, 0, 0)
+
+### Set Repair Options
+
+Configures the **Phase 3** behavior (automatic circle restoration) at the end of Combine All operations.
+
+**Why it matters:** SketchUp Pro's native boolean operations break the `ArcCurve` association of circles: a circle becomes a series of small individual segments that you'd otherwise have to click one by one. Phase 3 detects these segments and welds them back into a single-click selectable `Curve`. On very large objects (tens of thousands of edges), this detection can take several seconds; this option lets you skip it in that case.
+
+**How to use:**
+1. Click **Set Repair Options** (no selection required)
+2. A dialog opens with two fields:
+   - **Auto-repair circles on large objects** (Yes/No): if `Yes`, restoration always runs, even on large objects; if `No`, it is skipped above the threshold and a message warns you
+   - **Large object threshold (edges)**: number of edges above which an object is considered "large"
+3. Click **OK** — values are remembered across sessions
+
+**Defaults:** Auto-repair = `Yes`, Threshold = `10000` edges
+
+**Phase 3 decision (summary):**
+
+| Case | Action |
+|------|--------|
+| Result ≤ threshold | Restoration always runs |
+| Result > threshold AND auto-repair = Yes | Restoration runs |
+| Result > threshold AND auto-repair = No | Restoration skipped + modal message |
 
 ## Workflow
 
@@ -86,9 +110,10 @@ Registers a color to identify which solids should be subtracted during Combine A
 
 | Icon | Command | Description |
 |------|---------|-------------|
-| Combine Union | Combine All (Union) | Native union + subtract |
-| Combine Shell | Combine All (Shell) | Native outer shell + subtract |
+| Combine Union | Combine All (Union) | Native union + subtract + circle restoration |
+| Combine Shell | Combine All (Shell) | Native outer shell + subtract + circle restoration |
 | Set Color | Set Subtract Color | Pick color from selection |
+| Circle ✓ | Set Repair Options | Configure auto-repair and edge threshold |
 
 ## Troubleshooting
 
