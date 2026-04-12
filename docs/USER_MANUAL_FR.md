@@ -11,6 +11,13 @@ Le plugin fournit quatre commandes accessibles via le menu **Extensions > Solid 
 - **SketchUp Pro** 2017 ou plus recent
 - Tous les objets doivent etre des groupes ou composants **solides** (geometrie manifold — chaque arete borde exactement 2 faces)
 
+### Compatibilité par version
+
+| Version SketchUp | Fonctionnalités disponibles |
+|---|---|
+| Pro 2017 – 2019 | Combine All (Union), Combine All (Shell), Set Subtract Color |
+| Pro 2020.1+ | Tout ci-dessus + restauration automatique cercles/arcs + Set Repair Options |
+
 ## Commandes
 
 ### Combine All (Union)

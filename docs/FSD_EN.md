@@ -1,7 +1,7 @@
 # Solid Batch — Functional Specification Document
 
-**Version:** 2.2.0
-**Date:** 2026-04-11
+**Version:** 2.2.1
+**Date:** 2026-04-12
 **Author:** DRO
 
 ---
@@ -42,6 +42,7 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | SketchUp version | Pro 2017 or later |
 | Operating system | Windows / macOS (any OS supported by SketchUp) |
 | Ruby API methods | `Group#union`, `Group#outer_shell`, `Group#subtract`, `Group#manifold?` |
+| Circle/arc restoration | Requires SketchUp 2020.1+ (`Entities#weld`). On older versions, Phase 3 is silently skipped and the Set Repair Options command is hidden. |
 
 ### 4.2 Functional Requirements
 
@@ -301,3 +302,4 @@ All user-facing messages use `UI.messagebox` with `MB_OK`. Error messages includ
 | 2.0.0 | 2026-04-04 | Removed custom engine. Added Combine All (Union/Shell) using native Pro methods. Added Set Subtract Color. Removed Union, Subtract, Split individual operations. Transparent operations for fast commits + single undo. Status bar progress display. |
 | 2.1.0 | 2026-04-11 | Added Phase 3: automatic restoration of broken circles on the result (`CircleRestore` module adapted from Re-Cercle). Added `Set Repair Options` command to configure threshold and auto-repair toggle. Persistence of new options. New `repair_circles_*.png` icon. |
 | 2.2.0 | 2026-04-11 | Phase 3 extended: automatic restoration of **arcs** in addition to circles via `find_arcs_by_geometry` + `open_chain?`. New `Min segments for arc detection` parameter configurable in `Set Repair Options` (default 8). `restore_in_solid` now returns `{circles:, arcs:, total:}`. Stage 1b inserted between circles and pre-existing curve fragments. |
+| 2.2.1 | 2026-04-12 | Backward compatibility with SketchUp Pro 2017+. Replaced Ruby 2.3 safe navigation (`&.`) with classic nil checks for Ruby 2.2 compatibility. Added `respond_to?(:weld)` guard in `CircleRestore` — Phase 3 silently skipped on SketchUp < 2020.1. Set Repair Options menu/toolbar hidden on versions < 2020.1. |

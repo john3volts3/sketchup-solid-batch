@@ -1,7 +1,7 @@
 # Solid Batch — Specification Fonctionnelle Detaillee
 
-**Version :** 2.2.0
-**Date :** 2026-04-11
+**Version :** 2.2.1
+**Date :** 2026-04-12
 **Auteur :** DRO
 
 ---
@@ -42,6 +42,7 @@ Solid Batch est un plugin SketchUp Pro qui permet d'effectuer des operations boo
 | Version SketchUp | Pro 2017 ou plus recent |
 | Systeme d'exploitation | Windows / macOS (tout OS supporte par SketchUp) |
 | Methodes Ruby API | `Group#union`, `Group#outer_shell`, `Group#subtract`, `Group#manifold?` |
+| Restauration cercles/arcs | Nécessite SketchUp 2020.1+ (`Entities#weld`). Sur les versions antérieures, la Phase 3 est silencieusement ignorée et la commande Set Repair Options est masquée. |
 
 ### 4.2 Exigences fonctionnelles
 
@@ -301,3 +302,4 @@ Tous les messages utilisateur utilisent `UI.messagebox` avec `MB_OK`. Les messag
 | 2.0.0 | 2026-04-04 | Suppression du moteur custom. Ajout Combine All (Union/Shell) utilisant les methodes natives Pro. Ajout Set Subtract Color. Suppression des operations individuelles Union, Subtract, Split. Operations transparentes pour commits rapides + undo unique. Affichage progression dans la barre de statut. |
 | 2.1.0 | 2026-04-11 | Ajout Phase 3 : restauration automatique des cercles cassés sur le résultat (module `CircleRestore` adapté de Re-Cercle). Ajout commande `Set Repair Options` pour configurer le seuil et le toggle auto-repair. Persistance des nouvelles options. Nouvelle icône `repair_circles_*.png`. |
 | 2.2.0 | 2026-04-11 | Phase 3 étendue : restauration automatique des **arcs** en plus des cercles via `find_arcs_by_geometry` + `open_chain?`. Nouveau paramètre `Min segments for arc detection` configurable dans `Set Repair Options` (défaut 8). `restore_in_solid` retourne maintenant `{circles:, arcs:, total:}`. Stage 1b inséré entre cercles et fragments de Curves. |
+| 2.2.1 | 2026-04-12 | Rétrocompatibilité SketchUp Pro 2017+. Remplacement de la safe navigation Ruby 2.3 (`&.`) par des checks nil classiques pour compatibilité Ruby 2.2. Ajout guard `respond_to?(:weld)` dans `CircleRestore` — Phase 3 silencieusement ignorée sur SketchUp < 2020.1. Menu/toolbar Set Repair Options masqués sur versions < 2020.1. |

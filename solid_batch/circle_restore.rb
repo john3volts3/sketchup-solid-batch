@@ -38,6 +38,8 @@ module SolidBatch
       return result unless solid && solid.valid?
       entities = inner_entities(solid)
       return result unless entities
+      # Entities#weld requires SketchUp 2020.1+ — skip silently on older versions
+      return result unless entities.respond_to?(:weld)
 
       all_edges = collect_edges_from_entities(entities)
       return result if all_edges.empty?

@@ -27,6 +27,7 @@ All operations use SketchUp Pro's native boolean engine for maximum reliability.
 ## Requirements
 
 - **SketchUp Pro** (2017 or later) — the native boolean methods (`union`, `outer_shell`, `subtract`) are Pro-only features.
+- Circle and arc restoration requires **SketchUp 2020.1+** (`Entities#weld`). On older versions, batch operations work normally but restoration is silently skipped.
 
 ## Installation
 
@@ -85,6 +86,7 @@ Toutes les operations utilisent le moteur booleen natif de SketchUp Pro pour une
 ## Prerequis
 
 - **SketchUp Pro** (2017 ou plus recent) — les methodes booleennes natives (`union`, `outer_shell`, `subtract`) sont exclusives a la version Pro.
+- La restauration des cercles et arcs nécessite **SketchUp 2020.1+** (`Entities#weld`). Sur les versions antérieures, les opérations batch fonctionnent normalement mais la restauration est silencieusement ignorée.
 
 ## Installation
 

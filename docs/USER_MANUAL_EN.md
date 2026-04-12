@@ -11,6 +11,13 @@ The plugin provides four commands accessible via the **Extensions > Solid Batch*
 - **SketchUp Pro** 2017 or later
 - All objects must be **solid** groups or components (manifold geometry — every edge borders exactly 2 faces)
 
+### Compatibility by version
+
+| SketchUp version | Available features |
+|---|---|
+| Pro 2017 – 2019 | Combine All (Union), Combine All (Shell), Set Subtract Color |
+| Pro 2020.1+ | All of the above + automatic circle/arc restoration + Set Repair Options |
+
 ## Commands
 
 ### Combine All (Union)

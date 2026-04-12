@@ -8,6 +8,26 @@
 
 ---
 
+## Session du 2026-04-12
+
+### Livraison v2.2.1 — Compatibilité SketchUp Pro 2017+
+
+- **solid_batch/circle_restore.rb** — Ajout guard `entities.respond_to?(:weld)` dans `restore_in_solid` : retourne silencieusement `{circles: 0, arcs: 0, total: 0}` si `Entities#weld` n'est pas disponible (SketchUp < 2020.1)
+- **solid_batch/main.rb** — 3 modifications de compatibilité :
+  - Remplacement de tous les `result&.valid?` (Ruby 2.3+ safe navigation) par `result && result.valid?` (compatible Ruby 2.2 / SketchUp 2017)
+  - Menu item et bouton toolbar "Set Repair Options" masqués si `Sketchup.version.to_f < 20.1` (fonctionnalité inutile sans `weld`)
+  - Suppression du `weld_warning` dans la messagebox de `do_set_repair_options` (remplacé par masquage du bouton)
+- **solid_batch/version.rb** — Version `2.2.0` → `2.2.1`
+- **solid_batch.rb** — `ext.version = '2.2.1'`
+- **docs/FSD_EN.md, FSD_FR.md** — Compatibilité mise à jour, note weld 2020.1+, version history
+- **docs/USER_MANUAL_EN.md, USER_MANUAL_FR.md** — Note compatibilité par version
+- **README.md** — Prérequis mis à jour (2017+, note restauration 2020.1+)
+- **build/solid_batch.rbz** — Reconstruit
+- **Plugins SketchUp 2017 + 2021** — Fichiers copiés
+- **Tests** — Plugin testé dans SketchUp 2017 (booléens OK, Set Repair Options masqué) et SketchUp 2021 (toutes fonctionnalités OK)
+
+---
+
 ## Session du 2026-04-11
 
 ### Livraison v2.2.0

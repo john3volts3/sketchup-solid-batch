@@ -9,7 +9,9 @@ module SolidBatch
     submenu.add_item('Combine All (Shell)') { self.do_combine_all_pro(:outer_shell) }
     submenu.add_separator
     submenu.add_item('Set Subtract Color') { self.do_set_subtract_color }
-    submenu.add_item('Set Repair Options') { self.do_set_repair_options }
+    if Sketchup.version.to_f >= 20.1
+      submenu.add_item('Set Repair Options') { self.do_set_repair_options }
+    end
 
     toolbar = UI::Toolbar.new(PLUGIN_NAME)
 
@@ -33,11 +35,13 @@ module SolidBatch
     cmd_setcolor.large_icon = File.join(icons_dir, 'setcolor_24.png')
     toolbar.add_item(cmd_setcolor)
 
-    cmd_repairopts = UI::Command.new('Set Repair Options') { self.do_set_repair_options }
-    cmd_repairopts.tooltip = 'Set Repair Options — circle restoration threshold'
-    cmd_repairopts.small_icon = File.join(icons_dir, 'repair_circles_16.png')
-    cmd_repairopts.large_icon = File.join(icons_dir, 'repair_circles_24.png')
-    toolbar.add_item(cmd_repairopts)
+    if Sketchup.version.to_f >= 20.1
+      cmd_repairopts = UI::Command.new('Set Repair Options') { self.do_set_repair_options }
+      cmd_repairopts.tooltip = 'Set Repair Options — circle restoration threshold'
+      cmd_repairopts.small_icon = File.join(icons_dir, 'repair_circles_16.png')
+      cmd_repairopts.large_icon = File.join(icons_dir, 'repair_circles_24.png')
+      toolbar.add_item(cmd_repairopts)
+    end
 
     if toolbar.get_last_state == TB_VISIBLE
       toolbar.restore
@@ -240,7 +244,7 @@ module SolidBatch
           first_op = false
           model.selection.clear
           result = result.send(mode, other)
-          unless result&.valid?
+          unless result && result.valid?
             model.abort_operation
             UI.messagebox("Combine All failed at #{mode_label} step #{i + 1}.", MB_OK)
             return
@@ -264,7 +268,7 @@ module SolidBatch
           first_op = false
           model.selection.clear
           result = tool.subtract(result)
-          unless result&.valid?
+          unless result && result.valid?
             model.abort_operation
             UI.messagebox("Combine All failed at subtract step #{i + 1}.", MB_OK)
             return
@@ -275,7 +279,7 @@ module SolidBatch
 
       # Phase 3: Circle and arc restoration on the final result
       skip_message = nil
-      if result&.valid?
+      if result && result.valid?
         edge_count = CircleRestore.count_edges(result)
         threshold = large_threshold
         repair_large_enabled = (auto_repair_large == 'Yes')
@@ -301,7 +305,7 @@ module SolidBatch
       end
 
       model.selection.clear
-      model.selection.add(result) if result&.valid?
+      model.selection.add(result) if result && result.valid?
       Sketchup.status_text = "Solid Batch — Done (#{total_steps} operations)"
       puts "[Solid Batch] Combine All (#{mode_label}) done."
 
