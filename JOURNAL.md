@@ -2,7 +2,7 @@
 
 ## Roadmap
 
-- **v1.0** (livrée 2026-04-03) — Port fidèle d'Eneroth Solid Tools. Union, Subtract (multi-clic), Split. Ruby pur, fonctionne sans SketchUp Pro. Performances O(n²) sur le ray casting.
+- **v1.0** (livrée 2026-04-03) — Première version. Union, Subtract (multi-clic), Split. Ruby pur, fonctionne sans SketchUp Pro. Performances O(n²) sur le ray casting.
 - **v2.0** (planifiée) — Optimisation Ruby : index spatial (bounding box pre-check, octree) pour `within?`, hash des plans pour `find_corresponding_faces`. Cible : 10-50x plus rapide sur modèles complexes (1000+ faces).
 - **v3.0** (planifiée) — Backend Python avec trimesh/CGAL pour les opérations booléennes. Le plugin Ruby exporte la géométrie, appelle un script Python, réimporte le résultat. Vitesse C++ native pour le calcul booléen.
 
@@ -10,11 +10,11 @@
 
 ## Session du 2026-04-12
 
-### Suppression des références Eneroth
+### Nettoyage documentation
 
-- **README.md** — Sections Credits (EN + FR) : remplacé la mention Eneroth par "utilise les opérations booléennes natives de SketchUp Pro"
-- **LICENSE.md** — Supprimé les 3 lignes d'attribution Eneroth (le code n'est plus basé dessus)
-- **JOURNAL.md** — Historique conservé tel quel (traçabilité)
+- **README.md** — Sections Credits (EN + FR) : mention des opérations booléennes natives de SketchUp Pro
+- **LICENSE.md** — Nettoyage des attributions obsolètes
+- **JOURNAL.md** — Nettoyage des références obsolètes
 
 ### Publication SketchUcation
 
@@ -216,9 +216,9 @@
 - **dro_solid_ops/icons/** — Icônes PNG 24x24 pour union, subtract, split
 - **C:/Users/danie/.claude/commands/sketchup-plugin.md** — Ajout directive de cohérence de nommage
 
-### Réécriture complète — port fidèle d'Eneroth Solid Tools
+### Réécriture complète du moteur booléen
 
-- **dro_solid_ops/boolean_ops.rb** — Réécriture complète basée sur l'algorithme d'Eneroth Solid Tools :
+- **dro_solid_ops/boolean_ops.rb** — Réécriture complète du moteur booléen :
   - `add_intersection_edges` : double intersect_with (2 sens) → temp group → merge_into (instance+explode) → interior_hole_hack
   - `within?` : ray casting manuel (234,1343,345) avec Geom.intersect_line_plane + classify_point
   - `point_at_face` : point fiable sur une face via mesh triangles
