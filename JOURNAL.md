@@ -10,6 +10,12 @@
 
 ## Session du 2026-04-12
 
+### Suppression des références Eneroth
+
+- **README.md** — Sections Credits (EN + FR) : remplacé la mention Eneroth par "utilise les opérations booléennes natives de SketchUp Pro"
+- **LICENSE.md** — Supprimé les 3 lignes d'attribution Eneroth (le code n'est plus basé dessus)
+- **JOURNAL.md** — Historique conservé tel quel (traçabilité)
+
 ### Publication SketchUcation
 
 - **docs/SKETCHUCATION.md** — Création du fichier avec tout le contenu pour la page SketchUcation (métadonnées, short description, overview, features, quick start, documentation, release notes, compatibilité par version)

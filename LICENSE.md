@@ -2,10 +2,6 @@ MIT License
 
 Copyright (c) 2026 DRO
 
-Based on Eneroth Solid Tools by Julia Christina Eneroth
-https://github.com/Eneroth3/eneroth-solid-tools
-Copyright (c) 2017 Julia Christina Eneroth
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights

@@ -53,7 +53,7 @@ All operations use SketchUp Pro's native boolean engine for maximum reliability.
 
 ## Credits
 
-Inspired by the excellent [Eneroth Solid Tools](https://github.com/Eneroth3/eneroth-solid-tools) by **Julia Christina Eneroth** (MIT License, 2017).
+Uses the native boolean operations built into SketchUp Pro.
 
 ## License
 
@@ -112,7 +112,7 @@ Toutes les operations utilisent le moteur booleen natif de SketchUp Pro pour une
 
 ## Credits
 
-Inspire par l'excellent [Eneroth Solid Tools](https://github.com/Eneroth3/eneroth-solid-tools) de **Julia Christina Eneroth** (licence MIT, 2017).
+Utilise les operations booleennes natives de SketchUp Pro.
 
 ## Licence
 
