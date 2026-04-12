@@ -8,7 +8,7 @@
 
 ## Demo
 
-[![Solid Batch Demo](https://img.youtube.com/vi/Zmjdbe_O_Cc/0.jpg)](https://youtu.be/Zmjdbe_O_Cc)
+[![Solid Batch Demo](https://img.youtube.com/vi/Zmjdbe_O_Cc/0.jpg)](https://youtu.be/y5_-0-7OkBw)
 
 ## Why Solid Batch?
 
@@ -67,7 +67,7 @@ MIT License — see [LICENSE.md](LICENSE.md)
 
 ## Demo
 
-[![Solid Batch Demo](https://img.youtube.com/vi/Zmjdbe_O_Cc/0.jpg)](https://youtu.be/Zmjdbe_O_Cc)
+[![Solid Batch Demo](https://img.youtube.com/vi/Zmjdbe_O_Cc/0.jpg)](https://youtu.be/y5_-0-7OkBw)
 
 ## Pourquoi Solid Batch ?
 
