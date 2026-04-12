@@ -10,6 +10,17 @@
 
 ## Session du 2026-04-12
 
+### Publication SketchUcation
+
+- **docs/SKETCHUCATION.md** — Création du fichier avec tout le contenu pour la page SketchUcation (métadonnées, short description, overview, features, quick start, documentation, release notes, compatibilité par version)
+- **docs/Solid_Batch.png** — Icône du plugin pour SketchUcation (2048x2048)
+- **docs/icone-app.png** — Source de l'icône
+- **docs/demo.mp4** — Nouvelle vidéo démo (incluant Set Repair Options et restauration arcs)
+- **docs/demo_small.mp4** — Version compressée (800px, ~500 KB)
+- **docs/demo-2017.skp** — Fichier de test SketchUp 2017
+- **README.md** — Lien vidéo YouTube mis à jour
+- **Plugin soumis sur SketchUcation** — en attente de validation
+
 ### Livraison v2.2.1 — Compatibilité SketchUp Pro 2017+
 
 - **solid_batch/circle_restore.rb** — Ajout guard `entities.respond_to?(:weld)` dans `restore_in_solid` : retourne silencieusement `{circles: 0, arcs: 0, total: 0}` si `Entities#weld` n'est pas disponible (SketchUp < 2020.1)
