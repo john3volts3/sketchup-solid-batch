@@ -1,11 +1,5 @@
-.claude/settings.local.json
-docs/SKETCHUCATION.md
-
 # Windows
 Thumbs.db
 
 # SketchUp auto-backups
 *.skb
-
-# Dossier de references locales
-references/
