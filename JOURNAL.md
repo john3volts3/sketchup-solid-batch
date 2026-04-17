@@ -14,6 +14,11 @@
 
 - **docs/icone-app-54.png** — Création d'une version 54×54 px (4.8 KB) de l'icône, selon la spécification imposée par Sketchucation. L'original `docs/icone-app.png` (2048×2048, 4.78 MB) était trop lourd et n'apparaissait pas sur la page plugin. Original conservé comme master HD.
 
+### Nettoyage git
+
+- **`.gitignore`** — Simplifié pour ne contenir que des patterns génériques (`Thumbs.db`, `*.skb`). Les entrées privées (`.claude/settings.local.json`, `docs/SKETCHUCATION.md`, `references/`) ont été déplacées vers `.git/info/exclude` (local, non publié).
+- **`CIRCLE_RESTORE_PATTERN.md`** — Retiré du suivi git (obsolète pour ce projet : le module `solid_batch/circle_restore.rb` utilise un algorithme de détection a posteriori qui ne nécessite pas d'inventaire préalable). Fichier conservé localement via `.git/info/exclude` pour référence.
+
 ---
 
 ## Session du 2026-04-12
