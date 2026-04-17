@@ -8,6 +8,14 @@
 
 ---
 
+## Session du 2026-04-17
+
+### Icône Sketchucation redimensionnée
+
+- **docs/icone-app-54.png** — Création d'une version 54×54 px (4.8 KB) de l'icône, selon la spécification imposée par Sketchucation. L'original `docs/icone-app.png` (2048×2048, 4.78 MB) était trop lourd et n'apparaissait pas sur la page plugin. Original conservé comme master HD.
+
+---
+
 ## Session du 2026-04-12
 
 ### Nettoyage documentation
