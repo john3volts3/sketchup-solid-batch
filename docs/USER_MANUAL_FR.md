@@ -30,7 +30,7 @@ Fusionne tous les solides selectionnes en un seul, en utilisant `union` natif po
    - **Solides-outils** — tous les solides qui ONT la couleur de soustraction
 2. **Phase 1 (Union) :** Fusionne tous les solides de base en un seul par appels sequentiels a `union`. S'il n'y a qu'un seul solide de base, cette phase est ignoree.
 3. **Phase 2 (Subtract) :** Soustrait chaque solide-outil du solide fusionne, un par un.
-4. **Phase 3 (Restauration des cercles ET arcs) :** Détecte les cercles ET les arcs cassés par les opérations booléennes natives et les reconstitue en `Sketchup::Curve` sélectionnables en un clic. Cette phase peut être désactivée pour les très gros objets via **Set Repair Options**.
+4. **Phase 3 (Restauration des cercles ET arcs) :** Détecte les cercles ET les arcs cassés par les opérations booléennes natives et les reconstruit en **vrais cercles et arcs natifs** de SketchUp (inférence du centre, rayon et segments dans *Infos sur l'entité*). Quand la reconstruction native est impossible, ils sont soudés en une `Curve` sélectionnable en un clic (voir [Ce que produit la Phase 3](#ce-que-produit-la-phase-3)). Cette phase peut être désactivée pour les très gros objets via **Set Repair Options**.
 5. L'operation entiere est encapsulee dans une seule etape d'annulation.
 
 **Quand l'utiliser :** Quand vous voulez fusionner des solides en preservant les vides internes (ex. fusion de murs avec des ouvertures de fenetres).
@@ -60,7 +60,7 @@ Enregistre une couleur pour identifier les solides a soustraire lors des operati
 
 Configure le comportement de la **Phase 3** (restauration automatique des cercles ET arcs) à la fin des opérations Combine All.
 
-**Pourquoi c'est utile :** Les opérations booléennes natives de SketchUp Pro cassent les associations `ArcCurve` des cercles et des arcs : un cercle ou un arc d'origine devient une suite de petits segments individuels qu'on doit cliquer un par un. La Phase 3 détecte ces segments et les regroupe en `Curve` sélectionnable en un clic. Sur les très gros objets (plusieurs dizaines de milliers d'edges), cette détection peut prendre plusieurs secondes ; l'option permet de la désactiver dans ce cas.
+**Pourquoi c'est utile :** Les opérations booléennes natives de SketchUp Pro cassent les associations `ArcCurve` des cercles et des arcs : un cercle ou un arc d'origine devient une suite de petits segments individuels (ou une courbe simple sans inférence du centre). La Phase 3 les détecte et les reconstruit en cercles et arcs natifs. Sur les très gros objets (plusieurs dizaines de milliers d'edges), cela peut prendre plusieurs secondes ; l'option permet de la désactiver dans ce cas.
 
 **Comment l'utiliser :**
 1. Cliquez sur **Set Repair Options** (aucune sélection requise)
@@ -70,21 +70,21 @@ Configure le comportement de la **Phase 3** (restauration automatique des cercle
    - **Min segments for arc detection** : nombre minimum de segments pour qu'une chaîne d'edges soit considérée comme un arc. Plus bas = détecte les arcs plus courts mais risque de faux positifs. Plus haut = plus sûr mais peut manquer les arcs courts.
 3. Cliquez **OK** — les valeurs sont mémorisées pour les futures sessions
 
-**Valeurs par défaut :** Auto-repair = `Yes`, Threshold = `10000` edges, Min arc segments = `8`
+**Valeurs par défaut :** Auto-repair = `Yes`, Threshold = `10000` edges, Min arc segments = `6` (si vous aviez enregistré ces options avec une version précédente, votre valeur est conservée : vérifiez-la dans la fenêtre)
 
 **Choisir le `Min segments for arc detection` :**
 
-Le seuil par défaut de `8` est conservateur — il évite les faux positifs (3-4 edges en angle qui formeraient « par hasard » un quart de cercle) mais peut manquer les arcs courts. Quelques repères :
+Un arc n'est reconnu que si ses segments ont la même longueur et tournent du même angle (60° au plus chacun). Un cercle demande toujours 6 segments ou plus. Le défaut de `6` est aligné sur les cercles ; quelques repères :
 
-| Type d'arc | Segments | Détecté avec seuil = 8 ? |
+| Type d'arc | Segments | Détecté avec seuil = 6 ? |
 |------------|----------|--------------------------|
-| 360° avec 24 segments (cercle natif fin) | 24 | ✓ |
+| 360° avec 24 segments (cercle natif fin) | 24 | ✓ (cercle) |
 | 270° avec 12 segments (arc natif par défaut) | 9 | ✓ |
-| 180° avec 12 segments | 6 | ✗ — baisser le seuil à 6 ou moins |
-| 90° avec 12 segments | 3 | ✗ — risque de faux positif si seuil ≤ 3 |
-| 90° avec 24 segments | 6 | ✗ — baisser le seuil à 6 ou moins |
+| 180° avec 12 segments | 6 | ✓ |
+| 90° avec 24 segments | 6 | ✓ |
+| 90° avec 12 segments | 3 | ✗ — baisser le seuil à 3 |
 
-Si vous travaillez avec beaucoup d'arcs courts (≤ 6 segments), baissez le seuil à `4` ou `5`. Si vous voyez des faux positifs (des coudes droits transformés en arcs), remontez à `8` ou plus.
+Si vous travaillez avec beaucoup d'arcs courts, baissez le seuil (minimum `3`). Si des morceaux de polygones à côtés égaux sont transformés en arcs, remontez-le.
 
 **Décision Phase 3 (résumé) :**
 
@@ -93,6 +93,20 @@ Si vous travaillez avec beaucoup d'arcs courts (≤ 6 segments), baissez le seui
 | Résultat ≤ seuil | Restauration toujours exécutée |
 | Résultat > seuil ET auto-repair = Yes | Restauration exécutée |
 | Résultat > seuil ET auto-repair = No | Restauration ignorée + message modal |
+
+### Ce que produit la Phase 3
+
+| Cas dans le résultat | Résultat |
+|----------------------|----------|
+| Trou traversant, trou borgne, tenon (boîte ± cylindre), tronc de cône | Les deux cercles d'extrémité deviennent **natifs** (reconstruits par Pousser/Tirer) |
+| Cercle ou arc posé sur une face plane | Cercle ou arc **natif** |
+| Cercle traversé par une ligne | Arcs **natifs** entre les croisements |
+| Arcs d'une arête arrondie (congé), cylindre coupé par une arête, trous qui se croisent ou empilés, cercle sur une surface courbe, cylindre oblique | **Soudés** en une courbe (sélection en un clic, sans inférence du centre) |
+| Cercles déjà natifs | Inchangés |
+
+Un bilan s'affiche dans la barre de statut et, avec la raison de chaque soudure, dans la console Ruby (**Fenêtre > Console Ruby**).
+
+**Limitations :** les faces reconstruites autour d'un cercle réparé (paroi du trou, extrémités, face hôte) gardent leur matériau, leur balise et leur orientation, mais perdent la position de leur texture et leurs attributs. Un polygone régulier de 6 côtés ou plus (hexagone…) ne peut pas être distingué d'un cercle et en devient un.
 
 ## Flux de travail
 
@@ -157,8 +171,11 @@ Une des operations booleennes a echoue. Causes habituelles :
 - La geometrie est trop complexe ou a des faces coplanaires
 - Essayez de reordonner ou simplifier les solides problematiques
 
+### "Circle and arc restoration failed"
+Un cercle n'a pas pu être reconstruit. Seule la restauration est annulée : le résultat du Combine All est conservé et ses cercles restent dans leur état. La console Ruby donne le détail.
+
 ### Progression
-Pendant les operations par lot, la barre de statut en bas de la fenetre SketchUp affiche la progression en temps reel : `Solid Batch — Subtract 7/13 (54%)`. Un message final confirme la fin : `Solid Batch — Done (13 operations)`.
+Pendant les operations par lot, la barre de statut en bas de la fenetre SketchUp affiche la progression en temps reel : `Solid Batch — Subtract 7/13 (54%)`. Un message final confirme la fin, avec le bilan de la restauration des cercles : `Solid Batch — Done (13 operations) — 4 circle(s)/arc(s) rebuilt as native circles`.
 
 ### Annulation
 Toutes les operations Combine All sont encapsulees dans une seule etape d'annulation. Appuyez sur **Ctrl+Z** (Cmd+Z sur Mac) pour annuler l'operation entiere.

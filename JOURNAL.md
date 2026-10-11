@@ -8,6 +8,35 @@
 
 ---
 
+## Session du 2026-10-11
+
+### Cercles et arcs réparés en vrais cercles natifs (méthode Re-Cercle v2.0.0)
+
+- **Constat** : la Phase 3 (v2.2.1) ne faisait que souder (`entities.weld`) → `Curve` simple, jamais d'`ArcCurve` native (pas d'inférence du centre). Mêmes défauts que Re-Cercle v1 (tolérance absolue 0.1", centre par centroïde, cercles mixtes ignorés).
+- **Décisions utilisateur** : plugin **autonome** (code de Re-Cercle copié dans Solid Batch, aucune dépendance ni librairie commune) ; module conservé sous le nom `CircleRestore` ; minimum **6 segments** pour les cercles et par défaut pour les arcs ; avant SketchUp 2020.1 la Phase 3 reste ignorée (inchangé).
+- **solid_batch/circle_restore/detector.rb, rebuilder.rb, volume.rb** — **Création** : copies de `re_cercle/detector.rb`, `rebuilder.rb`, `volume.rb` (Re-Cercle v2.0.0), seul le namespace change (`SolidBatch::CircleRestore::…`, indentation +2), en-tête « Ported from Re-Cercle v2.0.0 ». Identité vérifiée par `diff -w`.
+- **solid_batch/circle_restore.rb** — Réécrit : `count_edges` conservé ; `restore_in_solid(solid, min_arc_segments:)` applique la méthode de Re-Cercle (`restore_circles`/`restore_chain`) à toutes les arêtes du résultat : `find_chains`, filtre des arcs < `min_arc_segments`, redétection avant chaque reconstruction, `:planar` / `:volume` / `:weld` ; vérification après chaque reconstruction native (`check_planar`, `check_volume` : une `ArcCurve`, nombre de segments attendu, sinon `raise`) ; retourne `{native:, welded:, unwelded:, reasons:}` ; nouvelle méthode `summary`. Ancien algorithme de soudure seule supprimé (`find_circles_by_geometry`, `find_arcs_by_geometry`, `group_by_circle_geometry`, `closed_chain?`, `open_chain?`, etc.). `DEFAULT_MIN_ARC_SEGMENTS` 8 → 6.
+- **solid_batch/main.rb** — `DEFAULT_MIN_ARC_SEGMENTS` 8 → 6 ; Phase 3 : bilan console (natifs, soudés avec raisons) et barre de statut (`Done (…) — …`) ; `rescue` propre à la Phase 3 : en cas d'échec seule la Phase 3 est annulée (résultat booléen conservé) et un message l'explique.
+- **docs/FSD_FR.md, docs/FSD_EN.md** — EF-05/FR-05 réécrit (algorithme, sortie, constantes, échec, limitations), EF-04 et persistance (défaut 6), ENF-10 remplacé, ENF-11 ajouté (plugin autonome), structure fichiers/module, flux Phase 3, gestion d'erreurs.
+- Syntaxe vérifiée (`ruby -wc`), test hors SketchUp avec API simulée (chargement, résolution des constantes, `summary`, `short_arc?`).
+- **Plugins SketchUp 2021 + 2017** — `main.rb`, `circle_restore.rb` et dossier `circle_restore/` copiés. En attente du test utilisateur (redémarrage de SketchUp nécessaire : nouveaux fichiers).
+- Pas de bump de version ni de livraison (manuels, README, `.rbz`, commit) avant validation des tests.
+- **Test utilisateur** : OK.
+
+### Livraison v2.3.0
+
+- **solid_batch/version.rb** — Version `2.2.1` → `2.3.0`
+- **solid_batch.rb** — `ext.version = '2.3.0'`
+- **README.md** — Fonctionnalité « restauration des cercles et arcs » réécrite (EN + FR) : cercles/arcs natifs, soudure en secours
+- **docs/USER_MANUAL_EN.md, USER_MANUAL_FR.md** — Phase 3 (natif), défaut min arc segments 6 (valeur enregistrée prioritaire), tableau des repères mis à jour, nouvelle section « What Phase 3 produces » / « Ce que produit la Phase 3 » (cas natifs/soudés, limitations), dépannage « Circle and arc restoration failed », message final de la barre de statut
+- **docs/FSD_EN.md, FSD_FR.md** — Version 2.3.0, date, ligne d'historique 2.3.0
+- **docs/SKETCHUCATION.md** (local, non suivi) — Version 2.3.0, fonctionnalité, notes de version v2.3.0
+- **build/solid_batch.rbz** — Reconstruit (inclut `solid_batch/circle_restore/`)
+- **Plugins SketchUp 2021 + 2017** — Loader et `version.rb` copiés
+- Commit + push
+
+---
+
 ## Session du 2026-04-17
 
 ### Icône Sketchucation redimensionnée

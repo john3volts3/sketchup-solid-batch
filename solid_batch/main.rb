@@ -58,7 +58,7 @@ module SolidBatch
   DEFAULT_SUBTRACT_COLOR = [255, 0, 0].freeze
   DEFAULT_AUTO_REPAIR_LARGE = 'Yes'.freeze
   DEFAULT_LARGE_THRESHOLD = 10000
-  DEFAULT_MIN_ARC_SEGMENTS = 8
+  DEFAULT_MIN_ARC_SEGMENTS = 6
 
   def self.subtract_color
     r = Sketchup.read_default('SolidBatch', 'subtract_color_r', DEFAULT_SUBTRACT_COLOR[0]).to_i
@@ -279,6 +279,7 @@ module SolidBatch
 
       # Phase 3: Circle and arc restoration on the final result
       skip_message = nil
+      repair_note = nil
       if result && result.valid?
         edge_count = CircleRestore.count_edges(result)
         threshold = large_threshold
@@ -290,9 +291,20 @@ module SolidBatch
           puts "[Solid Batch]   Phase 3: Restoring circles and arcs (#{edge_count} edges)..."
           model.start_operation(op_name, true, false, !first_op)
           first_op = false
-          restored = CircleRestore.restore_in_solid(result, min_arc_segments: min_arc_segments)
-          model.commit_operation
-          puts "[Solid Batch]   Phase 3: #{restored[:circles]} circle(s), #{restored[:arcs]} arc(s) restored"
+          begin
+            restored = CircleRestore.restore_in_solid(result, min_arc_segments: min_arc_segments)
+            model.commit_operation
+            repair_note = CircleRestore.summary(restored)
+            puts "[Solid Batch]   Phase 3: #{CircleRestore.summary(restored, reasons: true)}"
+          rescue => e
+            # Only the restoration is undone: the boolean result is kept.
+            model.abort_operation
+            puts "[Solid Batch]   Phase 3 error: #{e.message}"
+            e.backtrace.first(10).each { |line| puts "  #{line}" }
+            skip_message =
+              "Circle and arc restoration failed: #{e.message}\n\n" \
+              "The Combine All result is kept; its circles and arcs were left as they were."
+          end
         else
           puts "[Solid Batch]   Phase 3: Skipped (#{edge_count} edges > #{threshold} threshold)"
           skip_message =
@@ -306,7 +318,9 @@ module SolidBatch
 
       model.selection.clear
       model.selection.add(result) if result && result.valid?
-      Sketchup.status_text = "Solid Batch — Done (#{total_steps} operations)"
+      done_text = "Solid Batch — Done (#{total_steps} operations)"
+      done_text += " — #{repair_note}" if repair_note
+      Sketchup.status_text = done_text
       puts "[Solid Batch] Combine All (#{mode_label}) done."
 
       UI.messagebox(skip_message, MB_OK) if skip_message

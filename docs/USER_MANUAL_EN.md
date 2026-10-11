@@ -30,7 +30,7 @@ Merges all selected solids into one, using native `union` for base solids and na
    - **Tool solids** — all solids that DO have the subtract color
 2. **Phase 1 (Union):** Merges all base solids into one using sequential `union` calls. If there is only one base solid, this phase is skipped.
 3. **Phase 2 (Subtract):** Subtracts each tool solid from the merged base, one by one.
-4. **Phase 3 (Circle AND arc restoration):** Detects circles AND arcs broken by the native boolean operations and restores them as `Sketchup::Curve` selectable in a single click. This phase can be disabled for very large objects via **Set Repair Options**.
+4. **Phase 3 (Circle AND arc restoration):** Detects circles AND arcs broken by the native boolean operations and rebuilds them as **native SketchUp circles and arcs** (center inference, radius and segments in Entity Info). When a native rebuild is not possible, they are welded into a `Curve` selectable in a single click (see [What Phase 3 produces](#what-phase-3-produces)). This phase can be disabled for very large objects via **Set Repair Options**.
 5. The entire operation is wrapped in a single undo step.
 
 **When to use:** When you want to merge solids while preserving internal voids (e.g., merging walls that have window openings).
@@ -60,7 +60,7 @@ Registers a color to identify which solids should be subtracted during Combine A
 
 Configures the **Phase 3** behavior (automatic circle AND arc restoration) at the end of Combine All operations.
 
-**Why it matters:** SketchUp Pro's native boolean operations break the `ArcCurve` association of both circles and arcs: a circle or an arc becomes a series of small individual segments that you'd otherwise have to click one by one. Phase 3 detects these segments and welds them back into a single-click selectable `Curve`. On very large objects (tens of thousands of edges), this detection can take several seconds; this option lets you skip it in that case.
+**Why it matters:** SketchUp Pro's native boolean operations break the `ArcCurve` association of both circles and arcs: a circle or an arc becomes a series of small individual segments (or a plain curve without center inference). Phase 3 detects them and rebuilds them as native circles and arcs. On very large objects (tens of thousands of edges), this can take several seconds; this option lets you skip it in that case.
 
 **How to use:**
 1. Click **Set Repair Options** (no selection required)
@@ -70,21 +70,21 @@ Configures the **Phase 3** behavior (automatic circle AND arc restoration) at th
    - **Min segments for arc detection**: minimum number of segments for a chain of edges to be considered an arc. Lower = catches shorter arcs but risks false positives. Higher = safer but may miss short arcs.
 3. Click **OK** — values are remembered across sessions
 
-**Defaults:** Auto-repair = `Yes`, Threshold = `10000` edges, Min arc segments = `8`
+**Defaults:** Auto-repair = `Yes`, Threshold = `10000` edges, Min arc segments = `6` (if you saved these options with an earlier version, your saved value is kept: check it in the dialog)
 
 **Choosing `Min segments for arc detection`:**
 
-The default of `8` is conservative — it avoids false positives (3-4 edges in an angle that would happen to fit a quarter circle) but may miss short arcs. Some reference points:
+An arc is only recognized when its segments have the same length and turn by the same angle (at most 60° each). Circles always need 6 segments or more. The default of `6` matches circles; some reference points:
 
-| Arc type | Segments | Detected with threshold = 8? |
+| Arc type | Segments | Detected with threshold = 6? |
 |----------|----------|------------------------------|
-| 360° with 24 segments (refined native circle) | 24 | ✓ |
+| 360° with 24 segments (refined native circle) | 24 | ✓ (circle) |
 | 270° with 12 segments (default native arc) | 9 | ✓ |
-| 180° with 12 segments | 6 | ✗ — lower threshold to 6 or less |
-| 90° with 12 segments | 3 | ✗ — false positive risk if threshold ≤ 3 |
-| 90° with 24 segments | 6 | ✗ — lower threshold to 6 or less |
+| 180° with 12 segments | 6 | ✓ |
+| 90° with 24 segments | 6 | ✓ |
+| 90° with 12 segments | 3 | ✗ — lower threshold to 3 |
 
-If you work with many short arcs (≤ 6 segments), lower the threshold to `4` or `5`. If you see false positives (right-angle corners turned into arcs), raise back to `8` or higher.
+If you work with many short arcs, lower the threshold (minimum `3`). If equal-sided polygon fragments are turned into arcs, raise it.
 
 **Phase 3 decision (summary):**
 
@@ -93,6 +93,20 @@ If you work with many short arcs (≤ 6 segments), lower the threshold to `4` or
 | Result ≤ threshold | Restoration always runs |
 | Result > threshold AND auto-repair = Yes | Restoration runs |
 | Result > threshold AND auto-repair = No | Restoration skipped + modal message |
+
+### What Phase 3 produces
+
+| Case in the result | Result |
+|--------------------|--------|
+| Through hole, blind hole, pin (box ± cylinder), truncated cone | Both end circles become **native** (rebuilt with a Push/Pull) |
+| Circle or arc lying on a flat face | **Native** circle or arc |
+| Circle crossed by a line | **Native** arcs between the crossings |
+| Arcs of a rounded edge (fillet), cylinder cut by an edge, intersecting or stacked holes, circle on a curved surface, oblique cylinder | **Welded** into one curve (one click selects it, no center inference) |
+| Circles already native | Unchanged |
+
+A summary is shown in the status bar and, with the reason of each weld, in the Ruby Console (**Window > Ruby Console**).
+
+**Limitations:** the faces rebuilt around a repaired circle (hole wall, caps, host face) keep their material, tag and orientation, but lose their texture position and attributes. A regular polygon of 6 sides or more (hexagon…) cannot be told apart from a circle and becomes one.
 
 ## Workflow
 
@@ -157,8 +171,11 @@ One of the boolean operations failed. This usually means:
 - The geometry is too complex or has coplanar faces
 - Try reordering or simplifying the problematic solids
 
+### "Circle and arc restoration failed"
+A circle could not be rebuilt. Only the restoration is undone: the Combine All result is kept and its circles stay as they were. The Ruby Console shows the details.
+
 ### Progress
-During batch operations, the status bar at the bottom of the SketchUp window shows real-time progress: `Solid Batch — Subtract 7/13 (54%)`. A final message confirms completion: `Solid Batch — Done (13 operations)`.
+During batch operations, the status bar at the bottom of the SketchUp window shows real-time progress: `Solid Batch — Subtract 7/13 (54%)`. A final message confirms completion, with the circle restoration summary: `Solid Batch — Done (13 operations) — 4 circle(s)/arc(s) rebuilt as native circles`.
 
 ### Undo
 All Combine All operations are wrapped in a single undo step. Press **Ctrl+Z** (Cmd+Z on Mac) to revert the entire operation.
