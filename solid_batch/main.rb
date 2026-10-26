@@ -1,5 +1,6 @@
 require_relative 'version'
 require_relative 'circle_restore'
+require_relative 'solid_operations'
 
 module SolidBatch
   unless @loaded
@@ -197,20 +198,22 @@ module SolidBatch
     UI.messagebox("PRO Only vs. #{File.basename(__FILE__)}:#{line}", MB_OK)
   end
 
+  # Ruby engine (solid_operations.rb): the base is modified in place and the
+  # other solid erased. Returns the base, or nil on failure.
+  def self.ruby_boolean(op, base, other)
+    # A component shared with other instances is made unique first: those
+    # instances stay as they are, as with the native booleans.
+    if base.is_a?(Sketchup::ComponentInstance) && base.definition.count_instances > 1
+      base.make_unique
+    end
+    SolidOperations.send(op, base, other) ? base : nil
+  end
+
   def self.do_combine_all_pro(mode)
-    return pro_only(__LINE__) unless Sketchup.is_pro?
+    ruby = !Sketchup.is_pro?
+    return pro_only(__LINE__) if ruby
     solids = get_solids(2)
     return unless solids
-
-    # Check if native Pro methods are available
-    unless solids[0].respond_to?(mode)
-      UI.messagebox(
-        "This function requires SketchUp Pro.\n" \
-        "The native '#{mode}' method is not available in your version.",
-        MB_OK
-      )
-      return
-    end
 
     sub_color = subtract_color
     union_solids = solids.reject { |s| is_subtract_solid?(s) }
@@ -245,7 +248,7 @@ module SolidBatch
           model.start_operation(op_name, true, false, !first_op)
           first_op = false
           model.selection.clear
-          result = result.send(mode, other)
+          result = ruby ? ruby_boolean(mode, result, other) : result.send(mode, other)
           unless result && result.valid?
             model.abort_operation
             UI.messagebox("Combine All failed at #{mode_label} step #{i + 1}.", MB_OK)
@@ -259,7 +262,7 @@ module SolidBatch
 
       # Phase 2: Subtract all subtract-colored solids
       # Native subtract: tool.subtract(base) subtracts tool from base,
-      # erases tool, returns modified base
+      # erases tool, returns modified base. Ruby engine: base first.
       if subtract_solids.any?
         puts "[Solid Batch]   Phase 2: Subtract #{subtract_solids.length} solids..."
         subtract_solids.each_with_index do |tool, i|
@@ -269,7 +272,7 @@ module SolidBatch
           model.start_operation(op_name, true, false, !first_op)
           first_op = false
           model.selection.clear
-          result = tool.subtract(result)
+          result = ruby ? ruby_boolean(:subtract, result, tool) : tool.subtract(result)
           unless result && result.valid?
             model.abort_operation
             UI.messagebox("Combine All failed at subtract step #{i + 1}.", MB_OK)

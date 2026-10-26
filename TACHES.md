@@ -53,9 +53,9 @@ Les notes propres à ce PC sont dans `TACHES.local.md` (exclu de git) : à lire 
 - [x] Tests (2026-10-26) : T04, T07, T08 vérifient les cercles natifs dans toutes les versions ; T10 vérifie « PRO Only » sous Make (et sous Pro, Make simulé) ; T06 sauté sous Make. **2021** : 25 réussis, 0 échec, 0 sauté ; **Make 2017** : 6 réussis, 0 échec, 19 sautés (booléens), T07 : cercles natifs sous 2017.
 
 ### Lot D — Moteur Ruby `solid_operations.rb` (détails dans `TACHES.local.md`)
-- [ ] Copier `../sketchup-solid-for-maker/solid_for_maker/solid_operations.rb` (version 1.0.1, commit `2b2a596`, qui corrige le chambrage après son trou) dans `solid_batch/solid_operations.rb`, module `SolidForMaker` → `SolidBatch`, corps identique (vérifier par `diff`) ; en-tête et notice MIT comme `../sketchup-solid-procedural/solid_procedural/solid_operations.rb` et `LICENSE-solid-operations.txt`.
-- [ ] `do_combine_all_pro` : intégration du moteur, voir `TACHES.local.md`.
-- [ ] Tests du moteur : fichier local exclu de git (voir `TACHES.local.md`).
+- [x] Copier `../sketchup-solid-for-maker/solid_for_maker/solid_operations.rb` (version 1.0.1, commit `2b2a596`, qui corrige le chambrage après son trou) dans `solid_batch/solid_operations.rb`, module `SolidForMaker` → `SolidBatch`, corps identique (vérifié par `diff`) ; en-tête et notice MIT comme `../sketchup-solid-procedural/solid_procedural/solid_operations.rb` et `LICENSE-solid-operations.txt`.
+- [x] `do_combine_all_pro` : intégration du moteur, voir `TACHES.local.md` ; un seul contrôle de l'édition de SketchUp dans tout le plugin ; contrôle `respond_to?(mode)` (« requires SketchUp Pro ») retiré.
+- [x] Tests du moteur : fichier local exclu de git (voir `TACHES.local.md`). Batterie (2026-10-26) : **2021** 40 réussis, 0 échec ; **Make 2017** 21 réussis, 0 échec, 19 sautés (booléens natifs).
 
 ### Lot E — Documentation et livraison
 - [ ] `PRD.md` (créé), `docs/FSD_FR.md` / `docs/FSD_EN.md` (périmètre, moteurs, `repair_holes`, versions), `docs/USER_MANUAL_FR.md` / `docs/USER_MANUAL_EN.md`, `README.md` (exigences : « SketchUp Pro » ; restauration « 2020.1+ » à revoir), `JOURNAL.md`, version (`solid_batch.rb`, `solid_batch/version.rb`), `.rbz`, installation, commit, push ; recherche de chemins locaux avant chaque commit (dépôt public).

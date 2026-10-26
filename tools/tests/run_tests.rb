@@ -192,7 +192,7 @@ module SolidBatch
 
     PLUGIN_FILES = %w[
       version circle_restore/detector circle_restore/rebuilder circle_restore/volume
-      circle_restore main
+      circle_restore solid_operations main
     ].freeze
 
     def self.plugin_dir
@@ -550,6 +550,49 @@ module SolidBatch
       }
     end
 
+    # Circles of +acc+ rebuilt by the former repair_holes, then by the one of
+    # the plugin, each in an aborted operation: same result expected. +first+:
+    # the plate with 20 holes, at least twice faster.
+    def self.compare_repair(c, model, acc, first)
+      c.check(acc.manifold?, 'boolean result is a solid')
+      broken = arc_edges(inner(acc))
+      sig = {}
+      counts = {}
+      stats = {}
+      times = {}
+      [:scan, :plugin].each do |mode|
+        force_repair(mode)
+        model.start_operation('Solid Batch tests — repair_holes', true)
+        begin
+          started = Time.now
+          res = CircleRestore.restore_in_solid(acc, min_arc_segments: SolidBatch.min_arc_segments)
+          times[mode] = Time.now - started
+          sig[mode] = shape_signature(acc)
+          counts[mode] = [res[:native], res[:welded], res[:unwelded], res[:reasons].to_a.sort]
+          stats[mode] = repair_stats.dup
+          c.note("restore: #{CircleRestore.summary(res, reasons: true)}") if mode == :plugin
+        ensure
+          model.abort_operation
+          restore_repair
+        end
+      end
+      c.check(stats[:scan][:holes] > 0,
+              "repair_holes used (#{stats[:scan][:calls]} calls, #{stats[:scan][:holes]} holes)")
+      c.check(sig[:scan] == sig[:plugin], 'same faces, edges and circles as the former method',
+              signature_diff(sig[:scan], sig[:plugin]))
+      c.check(counts[:scan] == counts[:plugin], 'same restore counts',
+              "#{counts[:scan].inspect} / #{counts[:plugin].inspect}")
+      c.check(stats[:scan].values_at(:calls, :holes) == stats[:plugin].values_at(:calls, :holes),
+              'same repair_holes calls')
+      c.check(counts[:plugin][0] > 0 && sig[:plugin][:manifold], 'native circles rebuilt, still a solid',
+              counts[:plugin].inspect)
+      c.note(format('arc edges before %d, after %d; restore: former %.2fs (repair_holes %.2fs), ' \
+                    'plugin %.2fs (repair_holes %.2fs)', broken, sig[:plugin][:arc_edges],
+                    times[:scan], stats[:scan][:time], times[:plugin], stats[:plugin][:time]))
+      return unless first && CircleRestore::Volume.respond_to?(:near_items)
+      c.check(stats[:plugin][:time] < stats[:scan][:time] / 2, 'plugin repair_holes at least twice faster')
+    end
+
     def self.signature_diff(a, b)
       keys = a.keys.select { |k| a[k] != b[k] }
       parts = keys.map do |k|
@@ -576,6 +619,8 @@ module SolidBatch
                "weld defined=#{tests.weld?}")
         c.check(SolidBatch.respond_to?(:do_combine_all_pro), 'do_combine_all_pro defined')
         c.check(CircleRestore.respond_to?(:restore_in_solid), 'CircleRestore.restore_in_solid defined')
+        c.check(defined?(SolidBatch::SolidOperations) && SolidOperations.respond_to?(:outer_shell),
+                'SolidOperations loaded (solid_operations.rb)')
         project = File.join(tests::PROJECT_DIR, 'solid_batch')
         files = Dir.glob(File.join(project, '**', '*')).select { |f| File.file?(f) }
         names = files.map { |f| f[(project.length + 1)..-1] }
@@ -916,46 +961,11 @@ module SolidBatch
             temp.each { |d| model.definitions.remove(d) } if removable
           end
           next c.check(false, "boolean #{failed} failed") if failed
-          c.check(acc.manifold?, 'boolean result is a solid')
-          broken = tests.arc_edges(tests.inner(acc))
-          sig = {}
-          counts = {}
-          stats = {}
-          times = {}
-          [:scan, :plugin].each do |mode|
-            tests.force_repair(mode)
-            model.start_operation('Solid Batch tests — repair_holes', true)
-            begin
-              started = Time.now
-              res = CircleRestore.restore_in_solid(acc, min_arc_segments: SolidBatch.min_arc_segments)
-              times[mode] = Time.now - started
-              sig[mode] = tests.shape_signature(acc)
-              counts[mode] = [res[:native], res[:welded], res[:unwelded], res[:reasons].to_a.sort]
-              stats[mode] = tests.repair_stats.dup
-              c.note("restore: #{CircleRestore.summary(res, reasons: true)}") if mode == :plugin
-            ensure
-              model.abort_operation
-              tests.restore_repair
-            end
-          end
-          c.check(stats[:scan][:holes] > 0,
-                  "repair_holes used (#{stats[:scan][:calls]} calls, #{stats[:scan][:holes]} holes)")
-          c.check(sig[:scan] == sig[:plugin], 'same faces, edges and circles as the former method',
-                  tests.signature_diff(sig[:scan], sig[:plugin]))
-          c.check(counts[:scan] == counts[:plugin], 'same restore counts',
-                  "#{counts[:scan].inspect} / #{counts[:plugin].inspect}")
-          c.check(stats[:scan].values_at(:calls, :holes) == stats[:plugin].values_at(:calls, :holes),
-                  'same repair_holes calls')
-          c.check(counts[:plugin][0] > 0 && sig[:plugin][:manifold], 'native circles rebuilt, still a solid',
-                  counts[:plugin].inspect)
-          c.note(format('arc edges before %d, after %d; restore: former %.2fs (repair_holes %.2fs), ' \
-                        'plugin %.2fs (repair_holes %.2fs)', broken, sig[:plugin][:arc_edges],
-                        times[:scan], stats[:scan][:time], times[:plugin], stats[:plugin][:time]))
-          if i.zero? && CircleRestore::Volume.respond_to?(:near_items)
-            c.check(stats[:plugin][:time] < stats[:scan][:time] / 2, 'plugin repair_holes at least twice faster')
-          end
+          tests.compare_repair(c, model, acc, i.zero?)
         end
       end
+      # Also used by the local tests.
+      @repair_cases = repair_cases
 
       # Extra tests kept on this PC only (optional file, not in the repository).
       local = File.join(TESTS_DIR, 'local', 'local_tests.rb')

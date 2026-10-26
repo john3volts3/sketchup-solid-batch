@@ -16,6 +16,14 @@
 - **CLAUDE.md** (créé) — Instructions de projet : lire `TACHES.md` au démarrage, skills à charger, règles (nom identique partout, dépôt public sans chemin local, plugin autonome, booléens natifs inchangés sous Pro, Ruby 2.2 si Make est retenu, fiabilité avant vitesse, batterie de tests).
 - **TACHES.md** (créé) — État de la 2.3.0 ; constats vérifiés par `diff` avec Solid Procedural (garde `weld` qui bloque toute reconstruction des cercles avant 2020.1, `repair_holes` non accéléré, *Set Repair Options* caché avant 2020.1, Make non détecté par `respond_to?`) ; décisions à prendre (moteur de Solid for Maker 1.0.1 sous Make ou non, version, installation, outils de test, release) ; plan en lots A (batterie de tests) à E (documentation et livraison) ; pièges connus.
 
+### Lot D — moteur Ruby `solid_operations.rb`
+
+- **solid_batch/solid_operations.rb** (créé) — Copie du moteur de Solid for Maker 1.0.1 (commit `2b2a596`, porté d'Eneroth Solid Tools 3.0.0), module `SolidForMaker` → `SolidBatch`, corps identique (vérifié par `diff`) ; en-tête avec copyright et licence MIT, liste des changements faits dans Solid for Maker.
+- **solid_batch/LICENSE-solid-operations.txt** (créé) — Licence MIT du moteur (Eneroth, DRO).
+- **solid_batch/main.rb** — `require_relative 'solid_operations'` ; `ruby_boolean(op, base, autre)` (moteur Ruby : base modifiée sur place, autre solide effacé ; composant partagé avec d'autres instances rendu unique d'abord) ; phases 1 et 2 : moteur natif sous Pro, inchangé ; un seul contrôle de l'édition de SketchUp dans tout le plugin ; contrôle `respond_to?(mode)` et son message « requires SketchUp Pro » retirés.
+- **tools/tests/run_tests.rb** — `solid_operations` rechargé, T01 vérifie qu'il est chargé ; comparaison de T12 déplacée dans `compare_repair` ; cas de T12 gardés pour les tests locaux.
+- **Validation** — SketchUp 2021 : 40 réussis, 0 échec (tests publics inchangés). Make 2017 : 21 réussis, 0 échec, 19 sautés (pas de booléens natifs).
+
 ### Lot C — versions antérieures à 2020.1 et SketchUp Make
 
 - **solid_batch/circle_restore.rb** — Garde `respond_to?(:weld)` retirée de `restore_in_solid` (comme Solid Procedural M1) : seule la soudure de secours a besoin de `Entities#weld` (`Rebuilder.weld` renvoie déjà `:unavailable`) ; les reconstructions natives tournent avant 2020.1.
