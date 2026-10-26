@@ -16,6 +16,13 @@
 - **CLAUDE.md** (créé) — Instructions de projet : lire `TACHES.md` au démarrage, skills à charger, règles (nom identique partout, dépôt public sans chemin local, plugin autonome, booléens natifs inchangés sous Pro, Ruby 2.2 si Make est retenu, fiabilité avant vitesse, batterie de tests).
 - **TACHES.md** (créé) — État de la 2.3.0 ; constats vérifiés par `diff` avec Solid Procedural (garde `weld` qui bloque toute reconstruction des cercles avant 2020.1, `repair_holes` non accéléré, *Set Repair Options* caché avant 2020.1, Make non détecté par `respond_to?`) ; décisions à prendre (moteur de Solid for Maker 1.0.1 sous Make ou non, version, installation, outils de test, release) ; plan en lots A (batterie de tests) à E (documentation et livraison) ; pièges connus.
 
+### Lot C — versions antérieures à 2020.1 et SketchUp Make
+
+- **solid_batch/circle_restore.rb** — Garde `respond_to?(:weld)` retirée de `restore_in_solid` (comme Solid Procedural M1) : seule la soudure de secours a besoin de `Entities#weld` (`Rebuilder.weld` renvoie déjà `:unavailable`) ; les reconstructions natives tournent avant 2020.1.
+- **solid_batch/main.rb** — *Set Repair Options* dans toutes les versions (menu et barre d'outils, condition `>= 20.1` retirée) ; `do_combine_all_pro` commence par un contrôle `Sketchup.is_pro?` : sans SketchUp Pro, message « PRO Only » (méthode `pro_only`) avant toute autre vérification.
+- **tools/tests/run_tests.rb** — `force_pro` / `restore_pro` (`Sketchup.is_pro?` simulé) ; T04, T07, T08 vérifient les cercles natifs dans toutes les versions ; T06 sauté sous Make ; T10 réécrit (message « PRO Only », rien de modifié ; sous Pro, Make simulé) ; tests locaux facultatifs chargés s'ils existent.
+- **Validation** — SketchUp 2021 : 25 réussis, 0 échec, 0 sauté. Make 2017 : 6 réussis, 0 échec, 19 sautés (pas de booléens natifs) ; T07 : 2 cercles natifs reconstruits sous 2017.
+
 ### Lot B — accélération de `repair_holes` (résultat identique)
 
 - **tools/tests/run_tests.rb** — Ajout de T11 (grilles de `repair_holes` = parcours complet, 2 200 recherches) et de T12 (13 cas de Solid Procedural T15 : reconstruction des cercles par l'ancienne méthode puis par celle du plugin, sur la même géométrie, opération annulée entre les deux ; faces, arêtes, cercles, compteurs et appels comparés ; plaque à 20 trous au moins 2 fois plus rapide). Aides `boolean` et `run_steps` ; `setup` annule son opération en cas d'exception ; définitions `TempInstance#n` laissées par les booléens natifs supprimées par le test.

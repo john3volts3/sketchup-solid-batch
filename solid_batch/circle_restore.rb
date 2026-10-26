@@ -58,8 +58,8 @@ module SolidBatch
       return result unless solid && solid.valid?
       entities = inner_entities(solid)
       return result unless entities
-      # Entities#weld requires SketchUp 2020.1+ — skip silently on older versions
-      return result unless entities.respond_to?(:weld)
+      # Entities#weld (SketchUp 2020.1+) is only needed by the weld fallback
+      # (Rebuilder.weld): native rebuilds also run on older versions.
 
       chains = Detector.find_chains(Detector.all_edges(entities))
       chains.reject! { |chain| short_arc?(chain, min_arc_segments) }

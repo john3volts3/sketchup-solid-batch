@@ -175,7 +175,10 @@ module SolidBatch
       c.phases.clear
     ensure
       # The options forced by a test never leak into the next one.
-      force_default_options if @hooked
+      if @hooked
+        force_default_options
+        restore_pro
+      end
     end
 
     def self.fatal(e)
@@ -224,6 +227,7 @@ module SolidBatch
       su = Sketchup.singleton_class
       su.send(:alias_method, :sb_tests_status_text=, :status_text=) unless su.method_defined?(:sb_tests_status_text=)
       su.send(:alias_method, :sb_tests_write_default, :write_default) unless su.method_defined?(:sb_tests_write_default)
+      su.send(:alias_method, :sb_tests_is_pro?, :is_pro?) unless su.method_defined?(:sb_tests_is_pro?)
       Sketchup.define_singleton_method(:status_text=) do |text|
         tests.status << text.to_s
         Sketchup.send(:sb_tests_status_text=, text)
@@ -246,8 +250,18 @@ module SolidBatch
       UI.singleton_class.send(:alias_method, :inputbox, :sb_tests_inputbox)
       Sketchup.singleton_class.send(:alias_method, :status_text=, :sb_tests_status_text=)
       Sketchup.singleton_class.send(:alias_method, :write_default, :sb_tests_write_default)
+      restore_pro
       restore_options
       restore_repair
+    end
+
+    # Sketchup.is_pro? answers value (SketchUp Make simulated in SketchUp Pro).
+    def self.force_pro(value)
+      Sketchup.define_singleton_method(:is_pro?) { value }
+    end
+
+    def self.restore_pro
+      Sketchup.singleton_class.send(:alias_method, :is_pro?, :sb_tests_is_pro?)
     end
 
     # One option of the plugin answers the block during the tests.
@@ -629,11 +643,7 @@ module SolidBatch
         c.check((result.volume - expected).abs < 0.01, "volume #{expected.round(3)} (#{result.volume.round(3)})")
         c.check(model.selection.to_a == [result], 'result selected')
         arcs = tests.arc_edges(tests.inner(result))
-        if tests.weld?
-          c.check(arcs == 96, "2 holes with native circles: 96 edges in native circles (#{arcs})")
-        else
-          c.note("before 2020.1: #{arcs} edge(s) in native circles (no restoration)")
-        end
+        c.check(arcs == 96, "2 holes with native circles: 96 edges in native circles (#{arcs})")
         subtract = SolidBatch.subtract_color
         painted = tests.inner(result).grep(Sketchup::Face).count do |f|
           f.material && SolidBatch.color_match?(f.material.color, subtract)
@@ -664,6 +674,7 @@ module SolidBatch
       end
 
       test 'T06 Combine All: messages (selection)' do |c, model|
+        next c.skip('SketchUp Make: PRO Only first (see T10)') unless tests.pro?
         y = 200
         one = tests.setup(model) { tests.box(model.entities, 0, y, 0, 10, 10, 10, tests.base_material(model)) }
         tests.combine(model, :union, [one])
@@ -690,12 +701,8 @@ module SolidBatch
         res = CircleRestore.restore_in_solid(g, min_arc_segments: 6)
         model.commit_operation
         c.note("restore: #{CircleRestore.summary(res, reasons: true)}")
-        if tests.weld?
-          c.check(res[:native] >= 2, "native circles rebuilt (#{res[:native]})")
-          c.check(tests.arc_edges(g.entities) == 48, "48 edges in native circles (#{tests.arc_edges(g.entities)})")
-        else
-          c.note("before 2020.1: #{res[:native]} native circle(s), #{tests.arc_edges(g.entities)} edge(s) in native circles")
-        end
+        c.check(res[:native] >= 2, "native circles rebuilt (#{res[:native]})")
+        c.check(tests.arc_edges(g.entities) == 48, "48 edges in native circles (#{tests.arc_edges(g.entities)})")
         c.check(g.manifold? && g.entities.grep(Sketchup::Edge).length == edges, 'still a solid, same edges')
       end
 
@@ -718,15 +725,10 @@ module SolidBatch
         repaired = tests.groups_in(model, y).first
         next c.check(false, 'auto-repair Yes: one result') unless repaired
         arcs = tests.arc_edges(tests.inner(repaired))
-        if tests.weld?
-          c.check(arcs == 96, "auto-repair Yes: 96 edges in native circles (#{arcs})")
-        else
-          c.note("before 2020.1: #{arcs} edge(s) in native circles")
-        end
+        c.check(arcs == 96, "auto-repair Yes: 96 edges in native circles (#{arcs})")
       end
 
       test 'T09 Set Repair Options: values saved, invalid values set to defaults' do |c, _model|
-        c.note("Set Repair Options in the menu and toolbar: #{Sketchup.version.to_f >= 20.1 ? 'yes' : 'no (before 2020.1)'}")
         tests.messages.clear
         tests.writes.clear
         tests.prompts.clear
@@ -751,22 +753,21 @@ module SolidBatch
         c.check(tests.writes == expected, 'values saved', tests.writes.inspect)
       end
 
-      test 'T10 SketchUp Make: Combine All (current behavior, recorded)' do |c, model|
-        next c.skip('SketchUp Pro') if tests.pro?
+      # In SketchUp Pro, SketchUp Make is simulated (Sketchup.is_pro? false).
+      test 'T10 Combine All without SketchUp Pro: PRO Only message' do |c, model|
+        c.note('SketchUp Pro: SketchUp Make simulated') if tests.pro?
         y = 450
-        boxes = tests.setup(model) do
-          [0, 5].map { |x| tests.box(model.entities, x, y, 0, 10, 10, 10, tests.base_material(model)) }
-        end
-        tests.combine(model, :union, boxes)
-        left = tests.groups_in(model, y)
-        c.note("Union of 2 boxes: messages #{tests.messages.inspect}; #{left.length} solid(s) left, " \
-               "volumes #{left.map { |g| g.volume.round(2) }.inspect}")
-        y = 500
         base, tools = tests.setup(model) { tests.plate_with_holes(model, y) }
-        tests.combine(model, :union, [base] + tools)
-        left = tests.groups_in(model, y)
-        c.note("Plate and 2 subtract solids: messages #{tests.messages.inspect}; #{left.length} solid(s) left, " \
-               "volumes #{left.map { |g| g.volume.round(2) }.inspect}")
+        solids = [base] + tools
+        tests.force_pro(false)
+        [:union, :outer_shell].each do |mode|
+          tests.combine(model, mode, solids)
+          c.check(tests.messages.length == 1 && tests.messages.first.start_with?('PRO Only'),
+                  "#{mode}: PRO Only message", tests.messages.join(' / '))
+        end
+        tests.restore_pro
+        c.check(solids.all?(&:valid?) && tests.groups_in(model, y).length == 3, 'nothing changed')
+        c.check((base.volume - 4000).abs < 0.01, 'base unchanged', base.volume.round(3).to_s)
       end
 
       # T11: grid search of Volume.repair_holes against a full scan
@@ -954,6 +955,13 @@ module SolidBatch
             c.check(stats[:plugin][:time] < stats[:scan][:time] / 2, 'plugin repair_holes at least twice faster')
           end
         end
+      end
+
+      # Extra tests kept on this PC only (optional file, not in the repository).
+      local = File.join(TESTS_DIR, 'local', 'local_tests.rb')
+      if File.exist?(local)
+        load local
+        define_local_tests
       end
     end
 

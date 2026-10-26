@@ -9,9 +9,7 @@ module SolidBatch
     submenu.add_item('Combine All (Shell)') { self.do_combine_all_pro(:outer_shell) }
     submenu.add_separator
     submenu.add_item('Set Subtract Color') { self.do_set_subtract_color }
-    if Sketchup.version.to_f >= 20.1
-      submenu.add_item('Set Repair Options') { self.do_set_repair_options }
-    end
+    submenu.add_item('Set Repair Options') { self.do_set_repair_options }
 
     toolbar = UI::Toolbar.new(PLUGIN_NAME)
 
@@ -35,13 +33,11 @@ module SolidBatch
     cmd_setcolor.large_icon = File.join(icons_dir, 'setcolor_24.png')
     toolbar.add_item(cmd_setcolor)
 
-    if Sketchup.version.to_f >= 20.1
-      cmd_repairopts = UI::Command.new('Set Repair Options') { self.do_set_repair_options }
-      cmd_repairopts.tooltip = 'Set Repair Options — circle restoration threshold'
-      cmd_repairopts.small_icon = File.join(icons_dir, 'repair_circles_16.png')
-      cmd_repairopts.large_icon = File.join(icons_dir, 'repair_circles_24.png')
-      toolbar.add_item(cmd_repairopts)
-    end
+    cmd_repairopts = UI::Command.new('Set Repair Options') { self.do_set_repair_options }
+    cmd_repairopts.tooltip = 'Set Repair Options — circle restoration threshold'
+    cmd_repairopts.small_icon = File.join(icons_dir, 'repair_circles_16.png')
+    cmd_repairopts.large_icon = File.join(icons_dir, 'repair_circles_24.png')
+    toolbar.add_item(cmd_repairopts)
 
     if toolbar.get_last_state == TB_VISIBLE
       toolbar.restore
@@ -196,7 +192,13 @@ module SolidBatch
     )
   end
 
+  # Combine All without SketchUp Pro.
+  def self.pro_only(line)
+    UI.messagebox("PRO Only vs. #{File.basename(__FILE__)}:#{line}", MB_OK)
+  end
+
   def self.do_combine_all_pro(mode)
+    return pro_only(__LINE__) unless Sketchup.is_pro?
     solids = get_solids(2)
     return unless solids
 

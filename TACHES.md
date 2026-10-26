@@ -47,9 +47,10 @@ Les notes propres à ce PC sont dans `TACHES.local.md` (exclu de git) : à lire 
 - [ ] `OPTIMISATION_REPAIR_HOLES.md` : ligne Solid Batch du tableau § 8 (« fait »), puis commit.
 
 ### Lot C — Versions antérieures à 2020.1 et SketchUp Make (sans risque sous Pro 2021)
-- [ ] `circle_restore.rb` : garde `weld` comme dans `../sketchup-solid-procedural/solid_procedural/circle_restore.rb` (la soudure de secours seule est sautée) → cercles natifs sous 2017.
-- [ ] *Set Repair Options* dans toutes les versions (menu et barre d'outils).
-- [ ] Détection de Make par `Sketchup.is_pro?` dans `do_combine_all_pro` : message « PRO Only » (voir `TACHES.local.md`).
+- [x] `circle_restore.rb` : garde `weld` comme dans `../sketchup-solid-procedural/solid_procedural/circle_restore.rb` (la soudure de secours seule est sautée) → cercles natifs sous 2017.
+- [x] *Set Repair Options* dans toutes les versions (menu et barre d'outils).
+- [x] Détection de Make par `Sketchup.is_pro?` dans `do_combine_all_pro` : message « PRO Only » (voir `TACHES.local.md`).
+- [x] Tests (2026-10-26) : T04, T07, T08 vérifient les cercles natifs dans toutes les versions ; T10 vérifie « PRO Only » sous Make (et sous Pro, Make simulé) ; T06 sauté sous Make. **2021** : 25 réussis, 0 échec, 0 sauté ; **Make 2017** : 6 réussis, 0 échec, 19 sautés (booléens), T07 : cercles natifs sous 2017.
 
 ### Lot D — Moteur Ruby `solid_operations.rb` (détails dans `TACHES.local.md`)
 - [ ] Copier `../sketchup-solid-for-maker/solid_for_maker/solid_operations.rb` (version 1.0.1, commit `2b2a596`, qui corrige le chambrage après son trou) dans `solid_batch/solid_operations.rb`, module `SolidForMaker` → `SolidBatch`, corps identique (vérifier par `diff`) ; en-tête et notice MIT comme `../sketchup-solid-procedural/solid_procedural/solid_operations.rb` et `LICENSE-solid-operations.txt`.
