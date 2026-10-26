@@ -8,6 +8,14 @@
 
 ---
 
+## Session du 2026-10-26
+
+### Préparation de la reprise (aucun code)
+
+- **Demande utilisateur** (depuis la session Solid Procedural / Solid for Maker) : préparer dans Solid Batch le même travail de correction et d'optimisation que dans Solid Procedural 1.1.0 à 1.1.2, pour reprendre dans une nouvelle session ouverte dans ce dossier.
+- **CLAUDE.md** (créé) — Instructions de projet : lire `TACHES.md` au démarrage, skills à charger, règles (nom identique partout, dépôt public sans chemin local, plugin autonome, booléens natifs inchangés sous Pro, Ruby 2.2 si Make est retenu, fiabilité avant vitesse, batterie de tests).
+- **TACHES.md** (créé) — État de la 2.3.0 ; constats vérifiés par `diff` avec Solid Procedural (garde `weld` qui bloque toute reconstruction des cercles avant 2020.1, `repair_holes` non accéléré, *Set Repair Options* caché avant 2020.1, Make non détecté par `respond_to?`) ; décisions à prendre (moteur de Solid for Maker 1.0.1 sous Make ou non, version, installation, outils de test, release) ; plan en lots A (batterie de tests) à E (documentation et livraison) ; pièges connus.
+
 ## Session du 2026-10-11
 
 ### Cercles et arcs réparés en vrais cercles natifs (méthode Re-Cercle v2.0.0)
