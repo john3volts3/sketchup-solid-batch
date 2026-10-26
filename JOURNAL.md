@@ -16,6 +16,22 @@
 - **CLAUDE.md** (créé) — Instructions de projet : lire `TACHES.md` au démarrage, skills à charger, règles (nom identique partout, dépôt public sans chemin local, plugin autonome, booléens natifs inchangés sous Pro, Ruby 2.2 si Make est retenu, fiabilité avant vitesse, batterie de tests).
 - **TACHES.md** (créé) — État de la 2.3.0 ; constats vérifiés par `diff` avec Solid Procedural (garde `weld` qui bloque toute reconstruction des cercles avant 2020.1, `repair_holes` non accéléré, *Set Repair Options* caché avant 2020.1, Make non détecté par `respond_to?`) ; décisions à prendre (moteur de Solid for Maker 1.0.1 sous Make ou non, version, installation, outils de test, release) ; plan en lots A (batterie de tests) à E (documentation et livraison) ; pièges connus.
 
+### Lot A — batterie de tests automatiques (code du plugin inchangé)
+
+- **tools/tests/run_tests.ps1** (créé) — Lanceur repris de Solid Procedural : SketchUp trouvé par le registre (`InstallLocation`), refus de démarrer si SketchUp est ouvert, déploiement (`solid_batch.rb` + miroir de `solid_batch/`), `-RubyStartup`, attente du rapport terminé par `DONE`, fermeture du seul SketchUp lancé (numéro de processus), écran d'accueil de 2021 coupé puis remis. Options `-Versions`, `-NoDeploy`, `-Timeout`. ASCII seulement (vérifié, analyse Windows PowerShell 5.1 OK).
+- **tools/tests/run_tests.rb** (créé) — Cadre de Solid Procedural (module `SolidBatch::Tests`, modèle neuf, étapes par minuteries, rapport `results/latest-<version>.txt`), `UI.messagebox` et `UI.inputbox` enregistrés, `Sketchup.write_default` enregistré (aucune écriture dans le registre), options du plugin forcées puis rétablies après chaque test ; aides reprises pour le lot B (`shape_signature`, `force_repair`, `repair_holes_scan`…). Tests T01 à T10. Syntaxe vérifiée (`ruby -wc`), aucun chemin local.
+- **.gitignore** — Ajout de `tools/tests/results/` (rapports non suivis).
+- **Premier passage** — SketchUp 2021 : 9 réussis, 0 échec, 1 sauté. Make 2017 : 5 réussis, 0 échec, 5 sautés ; sous Make, Combine All affiche « Combine All error: 'union' is a Pro only feature. » (exception de l'API), aucun solide perdu ; aucun cercle natif avant 2020.1.
+- **TACHES.md** — Lot A coché, constats ajoutés (Make confirmé, échec au milieu d'un lot, couleur de soustraction sur les parois des trous).
+
+### Décisions de début de session (aucun code)
+
+- **TACHES.md** — Décisions prises : SketchUp Make (moteur Ruby de Solid for Maker 1.0.1 copié dans `solid_batch/solid_operations.rb`, licence MIT ; « PRO Only » sous Make ; booléens natifs inchangés sous Pro), version 2.4.0, installation dans SketchUp 2021 et Make 2017, outils de test publics sans chemin local, release GitHub v2.4.0 avec le `.rbz`, documentation publique minimale sur le moteur. Lot D réécrit en conséquence ; notes propres au PC dans un fichier local exclu de git.
+
+### Nettoyage des règles de permission locales (aucun code)
+
+- **.claude/settings.local.json** (non suivi par git) — Avertissement de Claude Code sur une règle `cp …/icons/*.png` trop large (`*` accepte n'importe quel texte). Suppression de 37 règles obsolètes : commandes de l'époque `dro_solid_ops` (ancien dossier du projet, renommage), commits ponctuels déjà faits, copies et `ffprobe`/`ffmpeg` pointant vers l'ancien emplacement du projet, règle `Read` avec une faute de frappe dans le chemin. Puis suppression de 8 règles en double, déjà couvertes par une règle plus large (`curl:*`, `rm:*`, `powershell:*`, `ls:*`). 19 règles conservées, JSON vérifié.
+
 ## Session du 2026-10-11
 
 ### Cercles et arcs réparés en vrais cercles natifs (méthode Re-Cercle v2.0.0)
