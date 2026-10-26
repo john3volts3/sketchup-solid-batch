@@ -15,8 +15,9 @@ The plugin provides four commands accessible via the **Extensions > Solid Batch*
 
 | SketchUp version | Available features |
 |---|---|
-| Pro 2017 – 2019 | Combine All (Union), Combine All (Shell), Set Subtract Color |
-| Pro 2020.1+ | All of the above + automatic circle/arc restoration + Set Repair Options |
+| Pro 2017 or later | All the features: Combine All (Union, Shell), Set Subtract Color, Set Repair Options, automatic circle and arc restoration (native circles) |
+| Pro 2020.1 or later | Also the weld fallback: a circle that cannot be rebuilt natively is welded into one curve (before 2020.1 it stays as segments) |
+| Make, Free | Combine All shows "PRO Only" (native booleans are a SketchUp Pro feature) |
 
 ## Commands
 
@@ -101,7 +102,7 @@ If you work with many short arcs, lower the threshold (minimum `3`). If equal-si
 | Through hole, blind hole, pin (box ± cylinder), truncated cone | Both end circles become **native** (rebuilt with a Push/Pull) |
 | Circle or arc lying on a flat face | **Native** circle or arc |
 | Circle crossed by a line | **Native** arcs between the crossings |
-| Arcs of a rounded edge (fillet), cylinder cut by an edge, intersecting or stacked holes, circle on a curved surface, oblique cylinder | **Welded** into one curve (one click selects it, no center inference) |
+| Arcs of a rounded edge (fillet), cylinder cut by an edge, intersecting or stacked holes, circle on a curved surface, oblique cylinder | **Welded** into one curve (one click selects it, no center inference); before SketchUp 2020.1, left as segments |
 | Circles already native | Unchanged |
 
 A summary is shown in the status bar and, with the reason of each weld, in the Ruby Console (**Window > Ruby Console**).
@@ -153,8 +154,8 @@ A summary is shown in the status bar and, with the reason of each weld, in the R
 
 ## Troubleshooting
 
-### "This function requires SketchUp Pro"
-You are using SketchUp Make or SketchUp Free. The native boolean methods are only available in SketchUp Pro.
+### "PRO Only"
+You are using SketchUp Make or SketchUp Free. Combine All uses the native boolean methods, which are only available in SketchUp Pro. Nothing is changed in the model.
 
 ### "Select at least 2 solid group(s) or component(s)"
 Your selection contains fewer than 2 valid solids. Check that:

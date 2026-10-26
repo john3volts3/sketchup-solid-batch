@@ -15,8 +15,9 @@ Le plugin fournit quatre commandes accessibles via le menu **Extensions > Solid 
 
 | Version SketchUp | Fonctionnalités disponibles |
 |---|---|
-| Pro 2017 – 2019 | Combine All (Union), Combine All (Shell), Set Subtract Color |
-| Pro 2020.1+ | Tout ci-dessus + restauration automatique cercles/arcs + Set Repair Options |
+| Pro 2017 ou plus récent | Toutes les fonctions : Combine All (Union, Shell), Set Subtract Color, Set Repair Options, restauration automatique des cercles et arcs (cercles natifs) |
+| Pro 2020.1 ou plus récent | En plus, la soudure de secours : un cercle non reconstructible en natif est soudé en une courbe (avant 2020.1, il reste en segments) |
+| Make, Free | Combine All affiche « PRO Only » (les booléens natifs sont une fonction de SketchUp Pro) |
 
 ## Commandes
 
@@ -101,7 +102,7 @@ Si vous travaillez avec beaucoup d'arcs courts, baissez le seuil (minimum `3`). 
 | Trou traversant, trou borgne, tenon (boîte ± cylindre), tronc de cône | Les deux cercles d'extrémité deviennent **natifs** (reconstruits par Pousser/Tirer) |
 | Cercle ou arc posé sur une face plane | Cercle ou arc **natif** |
 | Cercle traversé par une ligne | Arcs **natifs** entre les croisements |
-| Arcs d'une arête arrondie (congé), cylindre coupé par une arête, trous qui se croisent ou empilés, cercle sur une surface courbe, cylindre oblique | **Soudés** en une courbe (sélection en un clic, sans inférence du centre) |
+| Arcs d'une arête arrondie (congé), cylindre coupé par une arête, trous qui se croisent ou empilés, cercle sur une surface courbe, cylindre oblique | **Soudés** en une courbe (sélection en un clic, sans inférence du centre) ; avant SketchUp 2020.1, laissés en segments |
 | Cercles déjà natifs | Inchangés |
 
 Un bilan s'affiche dans la barre de statut et, avec la raison de chaque soudure, dans la console Ruby (**Fenêtre > Console Ruby**).
@@ -153,8 +154,8 @@ Un bilan s'affiche dans la barre de statut et, avec la raison de chaque soudure,
 
 ## Resolution de problemes
 
-### "This function requires SketchUp Pro"
-Vous utilisez SketchUp Make ou SketchUp Free. Les methodes booleennes natives ne sont disponibles que dans SketchUp Pro.
+### "PRO Only"
+Vous utilisez SketchUp Make ou SketchUp Free. Combine All utilise les methodes booleennes natives, qui ne sont disponibles que dans SketchUp Pro. Rien n'est modifie dans le modele.
 
 ### "Select at least 2 solid group(s) or component(s)"
 Votre selection contient moins de 2 solides valides. Verifiez que :

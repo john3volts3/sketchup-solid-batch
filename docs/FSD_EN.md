@@ -1,7 +1,7 @@
 # Solid Batch — Functional Specification Document
 
-**Version:** 2.3.0
-**Date:** 2026-10-11
+**Version:** 2.4.0
+**Date:** 2026-10-26
 **Author:** DRO
 
 ---
@@ -23,9 +23,9 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 - Configurable minimum segment count for arc detection (tradeoff between catching short arcs and avoiding false positives)
 
 ### Out of scope
-- Custom boolean engine (removed in v2.0 — plugin relies entirely on native Pro methods)
+- Custom boolean engine in SketchUp Pro (removed in v2.0 — in Pro, the plugin relies entirely on native methods)
 - Individual union/subtract/split operations (available natively in SketchUp Pro)
-- SketchUp Make / Free compatibility
+- SketchUp Make / Free compatibility (Combine All shows "PRO Only", see FR-07)
 
 ## 3. Target Users
 
@@ -39,10 +39,11 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 
 | Requirement | Value |
 |-------------|-------|
-| SketchUp version | Pro 2017 or later |
+| SketchUp version | Pro 2017 or later (without Pro: "PRO Only" message, FR-07) |
 | Operating system | Windows / macOS (any OS supported by SketchUp) |
-| Ruby API methods | `Group#union`, `Group#outer_shell`, `Group#subtract`, `Group#manifold?` |
-| Circle/arc restoration | Requires SketchUp 2020.1+ (`Entities#weld`, used by the weld fallback). On older versions, Phase 3 is silently skipped and the Set Repair Options command is hidden. |
+| Ruby API methods | `Group#union`, `Group#outer_shell`, `Group#subtract`, `Group#manifold?`, `Sketchup.is_pro?` |
+| Circle/arc restoration | Native circles and arcs in every version (2017+), Set Repair Options everywhere. Only the weld fallback requires SketchUp 2020.1+ (`Entities#weld`): before, a chain that cannot be rebuilt natively stays as segments. |
+| Ruby | 2.2 (SketchUp 2017) or later: no Ruby 2.3+ syntax or method |
 
 ### 4.2 Functional Requirements
 
@@ -97,10 +98,11 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | **Process** | 1. Count edges in the result (`CircleRestore.count_edges`). 2. If `edge_count <= threshold` OR `auto_repair_large == 'Yes'` → run `CircleRestore.restore_in_solid(result, min_arc_segments: <user_setting>)` (see Algorithm). 3. Otherwise → show a modal messagebox explaining that the repair was skipped and how to enable it. |
 | **Output** | Hash `{native: N, welded: M, unwelded: K, reasons: {reason => n}}`. Circles and arcs rebuilt as native `Sketchup::ArcCurve` (center inference, radius and segments in Entity Info), or welded into a `Sketchup::Curve` (fallback), OR modal messagebox if skipped. Summary in the Ruby Console (with the weld reasons) and in the status bar. |
 | **Algorithm** | Re-Cercle v2.0.0 method, copied into the plugin (`solid_batch/circle_restore/`, no dependency on Re-Cercle). (1) **Detection** on every edge of the result (nested groups/components included): chains of equal segments whose corners lie on one circle and turn by the same angle (± 1 %), segments split by extra vertices merged; closed chain ≥ 6 segments = circle, open chain ≥ `min_arc_segments` = arc; tolerance `max(0.001", 0.5 % × r)`; intact native circles and soft/hidden rings ignored. (2) **Classification** of each chain, detected again just before its rebuild: `:native` (nothing to do), `:planar` (all faces touching it in its plane → erase + `add_arc` with the same center, radius, segment count and phase + `find_faces` + face properties restored by probe point), `:volume` (end of a straight cylinder or truncated cone: hole, pin → wall erased, circle redrawn with `add_arc`, `Face#pushpull` to the other end, cone scaled, wall/caps properties restored: both ends become native), `:weld` (anything else → `Entities#weld`, reason logged). Lines attached to a circle split it into native arcs. (3) **Check** after each native rebuild: one `ArcCurve` per piece with the expected segment count; otherwise an exception aborts Phase 3. |
+| **Performance** | Since 2.4.0, `Volume.repair_holes` finds the hole edges through grids of tolerance-sized cells (`BASE_TOL × 10`) instead of scanning every edge for every hole (code of Solid for Maker 1.0.0). Same result, checked by the test battery (T11: grids = full scan; T12: 13 cases, former and new method on the same geometry); plate with 20 holes: 9.6 → 2.2 s (SketchUp 2021). |
 | **Constants** | `Detector::MIN_CIRCLE = 6`, `Detector::MIN_ARC = 3` (floor), `DEFAULT_MIN_ARC_SEGMENTS = 6` (configurable), `BASE_TOL = 0.001"`, `REL_TOL = 0.5 %`, `STEP_TOL = 1 %`, `MAX_STEP = 60°` |
 | **Undo** | Phase 3 chained to the single undo of phases 1/2 via transparent operation |
 | **Failure** | Exception during Phase 3 → only Phase 3 is aborted: the boolean result is kept, its circles stay as they were, a messagebox explains it |
-| **Limitations** | Recreated faces (hole wall, caps, host face) keep material, tag and orientation but lose their texture position and attributes; entity IDs change. A regular polygon of 6+ sides (hexagon…) is indistinguishable from a circle. Stay welded (not native): arcs of a rounded edge (fillet), circle on a curved surface, cylinder cut by an edge, intersecting or stacked holes, oblique cylinder, triangulated face, line attached to a cylinder circle. |
+| **Limitations** | Recreated faces (hole wall, caps, host face) keep material, tag and orientation but lose their texture position and attributes; entity IDs change. A regular polygon of 6+ sides (hexagon…) is indistinguishable from a circle. Stay welded (not native): arcs of a rounded edge (fillet), circle on a curved surface, cylinder cut by an edge, intersecting or stacked holes, oblique cylinder, triangulated face, line attached to a cylinder circle. Before SketchUp 2020.1 (no `Entities#weld`), these chains stay as segments. |
 
 #### FR-06: Solid Validation
 
@@ -110,11 +112,19 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | **Process** | Filter entities to Groups and ComponentInstances that pass `manifold?` check |
 | **Output** | Array of valid solids, or error message if fewer than required minimum |
 
+#### FR-07: Without SketchUp Pro
+
+| Field | Description |
+|-------|-------------|
+| **Input** | Combine All (Union or Shell) in SketchUp Make or Free |
+| **Process** | First check of Combine All, before the selection: SketchUp edition (`Sketchup.is_pro?`, the only edition check of the plugin) |
+| **Output** | "PRO Only" message; nothing is changed in the model |
+
 ### 4.3 Non-Functional Requirements
 
 | ID | Requirement |
 |----|-------------|
-| NFR-01 | No custom boolean engine — rely exclusively on native SketchUp Pro methods |
+| NFR-01 | In SketchUp Pro, no custom boolean engine — rely exclusively on native methods |
 | NFR-02 | Single undo step for all batch operations |
 | NFR-03 | Subtract color persists across sessions via SketchUp registry |
 | NFR-04 | Console logging (`puts`) for each operation step for debugging |
@@ -124,7 +134,9 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | NFR-08 | Circle and arc restoration applied only at the end (Phase 3), never on intermediate steps — for performance and reliability |
 | NFR-09 | The `large_threshold`, `auto_repair_large` and `min_arc_segments` settings persist in the SketchUp registry |
 | NFR-10 | Each chain is detected again just before its rebuild (rebuilding a cylinder also rebuilds its other end); each native rebuild is checked |
-| NFR-11 | Self-contained plugin: the circle engine is a copy of Re-Cercle v2.0.0 under `SolidBatch::CircleRestore`, no dependency on another plugin or shared library |
+| NFR-11 | Self-contained plugin: the circle engine is a copy of Re-Cercle v2.0.0 under `SolidBatch::CircleRestore`, the Ruby boolean engine `solid_operations.rb` a copy of Solid for Maker 1.0.1 (ported from Eneroth Solid Tools 3.0.0, MIT license, `LICENSE-solid-operations.txt`) under `SolidBatch::SolidOperations`; no dependency on another plugin or shared library |
+| NFR-12 | SketchUp 2017 and Ruby 2.2 compatibility: no Ruby 2.3+ syntax or method, `respond_to?` guard for any API newer than 2017 (`Entities#weld`) |
+| NFR-13 | Automatic test battery (`tools/tests/run_tests.ps1`, SketchUp 2021 and Make 2017); an optimization is accepted only if it gives the same result on the same geometry |
 
 ## 5. Architecture
 
@@ -140,6 +152,8 @@ solid_batch/
     detector.rb               # Chain detection and classification
     rebuilder.rb              # Planar native rebuild, weld fallback
     volume.rb                 # Push/Pull native rebuild of cylinders and cones
+  solid_operations.rb         # Ruby boolean engine (Solid for Maker 1.0.1, Eneroth Solid Tools, MIT)
+  LICENSE-solid-operations.txt # MIT license of the engine
   icons/
     combine_pro_union_16.png  # Toolbar icons (16px and 24px)
     combine_pro_union_24.png
@@ -157,7 +171,7 @@ solid_batch/
 SolidBatch                  # Top-level namespace
   PLUGIN_DIR                  # Plugin directory path
   PLUGIN_NAME                 # "Solid Batch"
-  VERSION                     # "2.3.0"
+  VERSION                     # "2.4.0"
 
   # Color management
   subtract_color()            # Read persisted color
@@ -180,6 +194,10 @@ SolidBatch                  # Top-level namespace
   do_combine_all_pro(mode)    # Batch union/shell + subtract + circle & arc restore
   do_set_subtract_color()     # Register subtract color
   do_set_repair_options()     # Configure auto-repair + threshold + min arc segments
+  pro_only(line)              # "PRO Only" message (FR-07)
+  ruby_boolean(op, base, other) # Boolean of the Ruby engine (solid_operations.rb)
+
+SolidBatch::SolidOperations # Ruby boolean engine (copy of Solid for Maker 1.0.1, MIT)
 
 SolidBatch::CircleRestore   # Circle and arc restoration module
   DEFAULT_MIN_ARC_SEGMENTS    # 6 (arcs, configurable)
@@ -199,10 +217,10 @@ SolidBatch::CircleRestore   # Circle and arc restoration module
 User clicks "Combine All (Union)" or "(Shell)"
   |
   v
-get_solids(2) — validate selection
+Check the edition (Sketchup.is_pro?) — without Pro: "PRO Only" message, end
   |
   v
-Check native method availability (respond_to?)
+get_solids(2) — validate selection
   |
   v
 Separate solids by subtract color
@@ -296,7 +314,7 @@ All user-facing messages use `UI.messagebox` with `MB_OK`. Error messages includ
 | Scenario | Behavior |
 |----------|----------|
 | Fewer than 2 solids selected | Show count message, abort |
-| SketchUp not Pro (method missing) | Show "requires SketchUp Pro" message, abort |
+| Without SketchUp Pro (Make, Free) | Show "PRO Only" message, abort (nothing changed) |
 | All solids have subtract color | Show "no base objects" message, abort |
 | Boolean step fails (nil/invalid result) | Abort operation (revert all changes), show step number |
 | Circle/arc restoration fails (Phase 3) | Abort Phase 3 only (boolean result kept, circles left as they were), log backtrace, show message |
@@ -312,3 +330,4 @@ All user-facing messages use `UI.messagebox` with `MB_OK`. Error messages includ
 | 2.2.0 | 2026-04-11 | Phase 3 extended: automatic restoration of **arcs** in addition to circles via `find_arcs_by_geometry` + `open_chain?`. New `Min segments for arc detection` parameter configurable in `Set Repair Options` (default 8). `restore_in_solid` now returns `{circles:, arcs:, total:}`. Stage 1b inserted between circles and pre-existing curve fragments. |
 | 2.2.1 | 2026-04-12 | Backward compatibility with SketchUp Pro 2017+. Replaced Ruby 2.3 safe navigation (`&.`) with classic nil checks for Ruby 2.2 compatibility. Added `respond_to?(:weld)` guard in `CircleRestore` — Phase 3 silently skipped on SketchUp < 2020.1. Set Repair Options menu/toolbar hidden on versions < 2020.1. |
 | 2.3.0 | 2026-10-11 | Phase 3 rebuilt on the Re-Cercle v2.0.0 method, copied into the plugin (`solid_batch/circle_restore/`, no dependency): broken circles and arcs become **native** `ArcCurve` (center inference) — planar rebuild, Push/Pull rebuild of cylinders and truncated cones (holes, pins) — with weld only as a fallback (reason logged). Detection by chains of equal segments (tolerance `max(0.001", 0.5 % r)`), circles ≥ 6 segments, default `min_arc_segments` 8 → 6. Post-rebuild checks; a Phase 3 failure aborts Phase 3 only (boolean result kept). `restore_in_solid` returns `{native:, welded:, unwelded:, reasons:}`; summary in console and status bar. |
+| 2.4.0 | 2026-10-26 | Native circles and arcs before SketchUp 2020.1 too (the `weld` guard now only blocks the weld fallback); Set Repair Options in every version. `repair_holes` made faster with grids (same result; plate with 20 holes 9.6 → 2.2 s). Without SketchUp Pro, Combine All shows "PRO Only" (one edition check, `Sketchup.is_pro?`); `respond_to?(mode)` check removed. Added `solid_operations.rb` (Ruby boolean engine of Solid for Maker 1.0.1, Eneroth Solid Tools, MIT). Automatic test battery `tools/tests` (SketchUp 2021 and Make 2017). |

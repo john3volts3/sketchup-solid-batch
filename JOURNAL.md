@@ -16,6 +16,15 @@
 - **CLAUDE.md** (créé) — Instructions de projet : lire `TACHES.md` au démarrage, skills à charger, règles (nom identique partout, dépôt public sans chemin local, plugin autonome, booléens natifs inchangés sous Pro, Ruby 2.2 si Make est retenu, fiabilité avant vitesse, batterie de tests).
 - **TACHES.md** (créé) — État de la 2.3.0 ; constats vérifiés par `diff` avec Solid Procedural (garde `weld` qui bloque toute reconstruction des cercles avant 2020.1, `repair_holes` non accéléré, *Set Repair Options* caché avant 2020.1, Make non détecté par `respond_to?`) ; décisions à prendre (moteur de Solid for Maker 1.0.1 sous Make ou non, version, installation, outils de test, release) ; plan en lots A (batterie de tests) à E (documentation et livraison) ; pièges connus.
 
+### Lot E — documentation et livraison 2.4.0
+
+- **solid_batch.rb, solid_batch/version.rb** — Version 2.4.0.
+- **PRD.md** (créé) — Contexte, usages, objectifs, périmètre, exigences EF-01 à EF-07 et NF-01 à NF-09 avec statuts, contraintes, critères d'acceptation rattachés aux tests, décisions et questions ouvertes, historique des livraisons 1.0.0 à 2.4.0.
+- **docs/FSD_FR.md, docs/FSD_EN.md** — Version 2.4.0 ; périmètre (Make / Free : « PRO Only ») ; configuration requise (cercles natifs dans toutes les versions, soudure de secours 2020.1+, Ruby 2.2) ; EF-05 : performance de `repair_holes`, chaînes non soudées avant 2020.1 ; EF-07 (sans SketchUp Pro) ; ENF-01 reformulée, ENF-11 (moteur Ruby, MIT), ENF-12 (SketchUp 2017, Ruby 2.2), ENF-13 (batterie de tests) ; fichiers et modules ; flux ; erreurs ; historique 2.4.0.
+- **docs/USER_MANUAL_FR.md, docs/USER_MANUAL_EN.md** — Tableau des fonctions par version (tout dès Pro 2017, soudure de secours 2020.1+, Make / Free : « PRO Only ») ; Phase 3 avant 2020.1 ; dépannage « PRO Only ».
+- **README.md** — Configuration requise mise à jour, section « Tests » (développeurs), crédit du moteur `solid_operations.rb` (Eneroth Solid Tools, MIT) ; anglais et français.
+- **TACHES.md** — Lot E coché, suite possible. Notes SketchUcation locales (exclues de git) : version 2.4.0, compatibilité, notes de version.
+
 ### Lot D — moteur Ruby `solid_operations.rb`
 
 - **solid_batch/solid_operations.rb** (créé) — Copie du moteur de Solid for Maker 1.0.1 (commit `2b2a596`, porté d'Eneroth Solid Tools 3.0.0), module `SolidForMaker` → `SolidBatch`, corps identique (vérifié par `diff`) ; en-tête avec copyright et licence MIT, liste des changements faits dans Solid for Maker.

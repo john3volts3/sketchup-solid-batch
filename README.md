@@ -26,8 +26,8 @@ All operations use SketchUp Pro's native boolean engine for maximum reliability.
 
 ## Requirements
 
-- **SketchUp Pro** (2017 or later) — the native boolean methods (`union`, `outer_shell`, `subtract`) are Pro-only features.
-- Circle and arc restoration requires **SketchUp 2020.1+** (`Entities#weld`). On older versions, batch operations work normally but restoration is silently skipped.
+- **SketchUp Pro** (2017 or later) — the native boolean methods (`union`, `outer_shell`, `subtract`) are Pro-only features. In SketchUp Make or Free, Combine All shows a "PRO Only" message.
+- Circle and arc restoration works in every version (native circles). Only the weld fallback (a single curve when a native rebuild is not possible) needs **SketchUp 2020.1+** (`Entities#weld`).
 
 ## Installation
 
@@ -51,9 +51,15 @@ All operations use SketchUp Pro's native boolean engine for maximum reliability.
 - [Functional Specification (English)](docs/FSD_EN.md)
 - [Specification fonctionnelle (Francais)](docs/FSD_FR.md)
 
+## Tests (developers)
+
+An automatic test battery is in `tools/tests` (not shipped in the `.rbz`). With SketchUp closed, `powershell -File tools\tests\run_tests.ps1` installs the plugin of the project into SketchUp 2021 and SketchUp 2017, runs the tests in a new model of each, closes them and prints the report (`-Versions 2021` for one version). SketchUp is found through the registry.
+
 ## Credits
 
 Uses the native boolean operations built into SketchUp Pro.
+
+`solid_batch/solid_operations.rb` is a Ruby boolean engine from Solid for Maker 1.0.1, based on [Eneroth Solid Tools](https://github.com/Eneroth3/eneroth-solid-tools) 3.0.0 by Julia Christina Eneroth (MIT license, see [solid_batch/LICENSE-solid-operations.txt](solid_batch/LICENSE-solid-operations.txt)).
 
 ## License
 
@@ -85,8 +91,8 @@ Toutes les operations utilisent le moteur booleen natif de SketchUp Pro pour une
 
 ## Prerequis
 
-- **SketchUp Pro** (2017 ou plus recent) — les methodes booleennes natives (`union`, `outer_shell`, `subtract`) sont exclusives a la version Pro.
-- La restauration des cercles et arcs nécessite **SketchUp 2020.1+** (`Entities#weld`). Sur les versions antérieures, les opérations batch fonctionnent normalement mais la restauration est silencieusement ignorée.
+- **SketchUp Pro** (2017 ou plus recent) — les methodes booleennes natives (`union`, `outer_shell`, `subtract`) sont exclusives a la version Pro. Sous SketchUp Make ou Free, Combine All affiche le message « PRO Only ».
+- La restauration des cercles et arcs fonctionne dans toutes les versions (cercles natifs). Seule la soudure de secours (une courbe unique quand la reconstruction native est impossible) nécessite **SketchUp 2020.1+** (`Entities#weld`).
 
 ## Installation
 
@@ -110,9 +116,15 @@ Toutes les operations utilisent le moteur booleen natif de SketchUp Pro pour une
 - [Functional Specification (English)](docs/FSD_EN.md)
 - [Specification fonctionnelle (Francais)](docs/FSD_FR.md)
 
+## Tests (developpeurs)
+
+Une batterie de tests automatique se trouve dans `tools/tests` (non livrée dans le `.rbz`). SketchUp fermé, `powershell -File tools\tests\run_tests.ps1` installe le plugin du projet dans SketchUp 2021 et SketchUp 2017, lance les tests dans un modèle neuf de chacun, les ferme et affiche le rapport (`-Versions 2021` pour une seule version). SketchUp est trouvé par le registre.
+
 ## Credits
 
 Utilise les operations booleennes natives de SketchUp Pro.
+
+`solid_batch/solid_operations.rb` est un moteur booléen Ruby issu de Solid for Maker 1.0.1, basé sur [Eneroth Solid Tools](https://github.com/Eneroth3/eneroth-solid-tools) 3.0.0 de Julia Christina Eneroth (licence MIT, voir [solid_batch/LICENSE-solid-operations.txt](solid_batch/LICENSE-solid-operations.txt)).
 
 ## Licence
 

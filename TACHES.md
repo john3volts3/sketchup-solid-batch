@@ -6,6 +6,7 @@ Chemins relatifs à la racine de ce dépôt ; les dépôts voisins sont dans le 
 
 ## État au 2026-10-26
 
+- **Version 2.4.0 livrée le 2026-10-26** (lots A à E ci-dessous). Ce qui suit décrit l'état de départ de la session.
 - **Version 2.3.0** (commit `13748c4`, 2026-10-11) : Combine All (Union / Shell) avec les booléens natifs, Set Subtract Color, Set Repair Options, reconstruction des cercles et arcs (méthode Re-Cercle v2.0.0, `solid_batch/circle_restore/`). Installée dans les plugins de SketchUp 2021 **et** de SketchUp Make 2017.
 - Dépôt GitHub **public**, aucun tag ni release GitHub (diffusion prévue : SketchUcation, notes privées dans `docs/SKETCHUCATION.md`, exclu de git).
 - Pas de `PRD.md` (exigé par les règles générales : à créer à la première livraison, à partir du FSD, du README et du JOURNAL), pas de batterie de tests.
@@ -58,7 +59,12 @@ Les notes propres à ce PC sont dans `TACHES.local.md` (exclu de git) : à lire 
 - [x] Tests du moteur : fichier local exclu de git (voir `TACHES.local.md`). Batterie (2026-10-26) : **2021** 40 réussis, 0 échec ; **Make 2017** 21 réussis, 0 échec, 19 sautés (booléens natifs).
 
 ### Lot E — Documentation et livraison
-- [ ] `PRD.md` (créé), `docs/FSD_FR.md` / `docs/FSD_EN.md` (périmètre, moteurs, `repair_holes`, versions), `docs/USER_MANUAL_FR.md` / `docs/USER_MANUAL_EN.md`, `README.md` (exigences : « SketchUp Pro » ; restauration « 2020.1+ » à revoir), `JOURNAL.md`, version (`solid_batch.rb`, `solid_batch/version.rb`), `.rbz`, installation, commit, push ; recherche de chemins locaux avant chaque commit (dépôt public).
+- [x] `PRD.md` (créé), `docs/FSD_FR.md` / `docs/FSD_EN.md` (périmètre, moteurs, `repair_holes`, versions), `docs/USER_MANUAL_FR.md` / `docs/USER_MANUAL_EN.md`, `README.md` (exigences : « SketchUp Pro » ; restauration « 2020.1+ » à revoir), `JOURNAL.md`, version (`solid_batch.rb`, `solid_batch/version.rb`), `.rbz`, installation, commit, push ; recherche de chemins locaux avant chaque commit (dépôt public). Livraison 2.4.0 le 2026-10-26 (tag `v2.4.0`, release GitHub avec le `.rbz`).
+
+## Suite possible (non planifiée)
+
+- Échec d'une étape au milieu d'un lot : tout annuler automatiquement ? (voir les constats ci-dessus et le PRD § 9).
+- Règles de l'Extension Warehouse sur le code tiers MIT (non vérifiées).
 
 ## Pièges connus (venus de Solid Procedural et de Solid for Maker)
 
