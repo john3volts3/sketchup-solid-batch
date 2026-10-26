@@ -16,6 +16,14 @@
 - **CLAUDE.md** (créé) — Instructions de projet : lire `TACHES.md` au démarrage, skills à charger, règles (nom identique partout, dépôt public sans chemin local, plugin autonome, booléens natifs inchangés sous Pro, Ruby 2.2 si Make est retenu, fiabilité avant vitesse, batterie de tests).
 - **TACHES.md** (créé) — État de la 2.3.0 ; constats vérifiés par `diff` avec Solid Procedural (garde `weld` qui bloque toute reconstruction des cercles avant 2020.1, `repair_holes` non accéléré, *Set Repair Options* caché avant 2020.1, Make non détecté par `respond_to?`) ; décisions à prendre (moteur de Solid for Maker 1.0.1 sous Make ou non, version, installation, outils de test, release) ; plan en lots A (batterie de tests) à E (documentation et livraison) ; pièges connus.
 
+### Lot B — accélération de `repair_holes` (résultat identique)
+
+- **tools/tests/run_tests.rb** — Ajout de T11 (grilles de `repair_holes` = parcours complet, 2 200 recherches) et de T12 (13 cas de Solid Procedural T15 : reconstruction des cercles par l'ancienne méthode puis par celle du plugin, sur la même géométrie, opération annulée entre les deux ; faces, arêtes, cercles, compteurs et appels comparés ; plaque à 20 trous au moins 2 fois plus rapide). Aides `boolean` et `run_steps` ; `setup` annule son opération en cas d'exception ; définitions `TempInstance#n` laissées par les booléens natifs supprimées par le test.
+- **Référence sur le code 2.3.0** (2021) : 22 réussis, 0 échec ; les 13 cas identiques (ancienne méthode contre elle-même).
+- **solid_batch/circle_restore/volume.rb** — `repair_holes` cherche les arêtes des trous dans des grilles de cases de la taille de la tolérance au lieu de parcourir toutes les arêtes pour chaque trou ; ajout de `hole_edge`, `point_grid`, `cell_of`, `near_items`, `near_grid?` ; note d'en-tête. Copie du fichier de Solid Procedural 1.1.1 (code de Solid for Maker 1.0.0), noms remplacés ; même tolérance (`Detector::BASE_TOL * 10`).
+- **Validation** — SketchUp 2021 : 23 réussis, 0 échec, 1 sauté ; 13 cas identiques, T11 sans écart, plaque à 20 trous 9,6 → 2,2 s. Make 2017 : 6 réussis, 0 échec, 18 sautés (pas de booléens natifs), T11 sans écart (Ruby 2.2.4).
+- **OPTIMISATION_REPAIR_HOLES.md** — Ligne Solid Batch du tableau § 8 : fait.
+
 ### Lot A — batterie de tests automatiques (code du plugin inchangé)
 
 - **tools/tests/run_tests.ps1** (créé) — Lanceur repris de Solid Procedural : SketchUp trouvé par le registre (`InstallLocation`), refus de démarrer si SketchUp est ouvert, déploiement (`solid_batch.rb` + miroir de `solid_batch/`), `-RubyStartup`, attente du rapport terminé par `DONE`, fermeture du seul SketchUp lancé (numéro de processus), écran d'accueil de 2021 coupé puis remis. Options `-Versions`, `-NoDeploy`, `-Timeout`. ASCII seulement (vérifié, analyse Windows PowerShell 5.1 OK).

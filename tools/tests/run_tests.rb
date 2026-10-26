@@ -352,6 +352,25 @@ module SolidBatch
       result = yield
       model.commit_operation
       result
+    rescue
+      model.abort_operation
+      raise
+    end
+
+    # Native boolean of a test step: the solid that holds the result, or nil.
+    def self.boolean(op, acc, tool)
+      op == 'union' ? acc.union(tool) : tool.subtract(acc)
+    end
+
+    # Booleans of a T12 case: [result, nil], or [last result, failed step].
+    def self.run_steps(model, base, steps)
+      acc = base
+      steps.each_with_index do |(op, tool), k|
+        model.selection.clear
+        acc = boolean(op, acc, tool)
+        return [acc, "#{op} #{k + 1} of #{steps.length}"] unless acc && acc.valid?
+      end
+      [acc, nil]
     end
 
     def self.box(entities, x, y, z, w, d, h, material = nil)
@@ -748,6 +767,193 @@ module SolidBatch
         left = tests.groups_in(model, y)
         c.note("Plate and 2 subtract solids: messages #{tests.messages.inspect}; #{left.length} solid(s) left, " \
                "volumes #{left.map { |g| g.volume.round(2) }.inspect}")
+      end
+
+      # T11: grid search of Volume.repair_holes against a full scan
+      # (OPTIMISATION_REPAIR_HOLES.md, § 6).
+      test 'T11 Grids of repair_holes = full scan' do |c, _model|
+        vol = CircleRestore::Volume
+        next c.skip('grid search not in the plugin yet') unless vol.respond_to?(:near_items)
+        tol = CircleRestore::Detector::BASE_TOL * 10
+        srand(1234)
+        rnd = -> { (rand - 0.5) * 0.1 }
+        # Dense points (many neighbors), negative coordinates, cell borders.
+        points = Array.new(500) { tests.pt(rnd.call, rnd.call, rnd.call) }
+        points += Array.new(50) { |k| tests.pt(tol * (k - 25), -tol * 3, tol * 2) }
+        queries = Array.new(2000) { tests.pt(rnd.call, rnd.call, rnd.call) }
+        queries += Array.new(200) { |k| tests.pt(tol * (k % 50 - 25) + rnd.call * 0.1, -tol * 3, tol * 2) }
+        holder = Struct.new(:position)
+        vertices = points.map { |p| holder.new(p) }
+        grid = vol.point_grid(points, tol)
+        vertex_grid = {}
+        vertices.each { |v| (vertex_grid[vol.cell_of(v.position, tol)] ||= []) << v }
+        bad = 0
+        pairs = 0
+        queries.each do |q|
+          want = points.select { |p| q.distance(p) < tol }
+          pairs += want.length
+          got = vol.near_items(q, grid, tol)
+          got_v = vol.near_items(q, vertex_grid, tol) { |v| v.position }.map(&:position)
+          bad += 1 unless [got, got_v].all? { |list| list.map(&:object_id).sort == want.map(&:object_id).sort }
+          bad += 1 unless vol.near_grid?(q, grid, tol) == !want.empty?
+        end
+        c.note("#{queries.length} queries, #{pairs} pairs closer than the tolerance")
+        c.check(pairs > 1000, 'enough close pairs to test')
+        c.check(bad.zero?, "same neighbors as the full scan (#{bad} difference(s))")
+      end
+
+      # T12: Volume.repair_holes of the plugin against the former method
+      # (repair_holes_scan) on the same broken circles: same faces, edges and
+      # circles expected (OPTIMISATION_REPAIR_HOLES.md, § 7). Cases of Solid
+      # Procedural 1.1.1 (T15).
+      repair_cases = [
+        ['plate with 20 holes', lambda do |m, x, y|
+          centers = (0...5).flat_map { |i| (0...4).map { |j| tests.pt(x + 4 + 8 * i, y + 4 + 8 * j, -1) } }
+          [tests.box(m.entities, x, y, 0, 40, 32, 2),
+           [['subtract', tests.cylinders(m.entities, centers, Z_AXIS, 0.8, 4)]]]
+        end],
+        ['holes near an edge', lambda do |m, x, y|
+          centers = [[1.15, 5], [5, 1.2], [10, 5], [15, 5]].map { |a, b| tests.pt(x + a, y + b, -1) }
+          [tests.box(m.entities, x, y, 0, 20, 10, 2),
+           [['subtract', tests.cylinders(m.entities, centers, Z_AXIS, 1, 4)]]]
+        end],
+        ['colored faces (front / back)', lambda do |m, x, y|
+          base = tests.box(m.entities, x, y, 0, 20, 20, 2)
+          base.entities.grep(Sketchup::Face).each do |f|
+            if f.normal.z > 0.9
+              f.material = tests.material(m, 'SB Test Top', [220, 60, 60])
+              f.back_material = tests.material(m, 'SB Test Top back', [60, 60, 220])
+            elsif f.normal.z < -0.9
+              f.material = tests.material(m, 'SB Test Bottom', [60, 200, 60])
+            elsif f.normal.x < -0.9
+              f.material = tests.material(m, 'SB Test Side', [200, 200, 60])
+            end
+          end
+          centers = [[5, 5], [15, 5], [5, 15], [15, 15]].map { |a, b| tests.pt(x + a, y + b, -1) }
+          [base, [['subtract', tests.cylinders(m.entities, centers, Z_AXIS, 1, 4)]]]
+        end],
+        ['holes across two coplanar faces', lambda do |m, x, y|
+          base = tests.box(m.entities, x, y, 0, 20, 10, 2)
+          base.entities.add_line(tests.pt(x + 10, y, 2), tests.pt(x + 10, y + 10, 2))
+          base.entities.add_line(tests.pt(x + 10, y, 0), tests.pt(x + 10, y + 10, 0))
+          centers = [[10, 3], [10, 7], [4, 5], [4, 8], [16, 5], [16, 2]].map { |a, b| tests.pt(x + a, y + b, -1) }
+          [base, [['subtract', tests.cylinders(m.entities, centers, Z_AXIS, 1, 4)]]]
+        end],
+        ['very small holes (1 mm)', lambda do |m, x, y|
+          centers = [[1, 1], [2, 1], [3, 1], [1, 3], [2, 3], [3, 3]].map { |a, b| tests.pt(x + a, y + b, -0.2) }
+          [tests.box(m.entities, x, y, 0, 4, 4, 0.4),
+           [['subtract', tests.cylinders(m.entities, centers, Z_AXIS, 0.02, 0.8)]]]
+        end],
+        ['very large holes', lambda do |m, x, y|
+          centers = [[50, 50], [150, 50], [50, 150], [150, 150]].map { |a, b| tests.pt(x + a, y + b, -1) }
+          [tests.box(m.entities, x, y, 0, 200, 200, 4),
+           [['subtract', tests.cylinders(m.entities, centers, Z_AXIS, 40, 6)]]]
+        end],
+        # The counterbore floor holds the hole circle.
+        ['counterbores', lambda do |m, x, y|
+          holes = [5, 12, 19].map { |a| tests.pt(x + a, y + 5, -1) }
+          bores = holes.map { |p| tests.pt(p.x, p.y, 2) }
+          [tests.box(m.entities, x, y, 0, 24, 10, 3),
+           [['subtract', tests.cylinders(m.entities, bores, Z_AXIS, 2, 2)],
+            ['subtract', tests.cylinders(m.entities, holes, Z_AXIS, 1, 5)]]]
+        end],
+        # Cone of radius 1.2 at z = 2 (a step around the hole), 2.7 at the top.
+        ['countersinks with a step', lambda do |m, x, y|
+          holes = [5, 12, 19].map { |a| tests.pt(x + a, y + 5, -1) }
+          sinks = holes.map { |p| tests.pt(p.x, p.y, 2) }
+          [tests.box(m.entities, x, y, 0, 24, 10, 3),
+           [['subtract', tests.cones(m.entities, sinks, 1.2, 2.7, 1.5)],
+            ['subtract', tests.cylinders(m.entities, holes, Z_AXIS, 1, 5)]]]
+        end],
+        # Hole first: the counterbore cuts the top face around the hole.
+        ['counterbores after the holes', lambda do |m, x, y|
+          holes = [5, 12, 19].map { |a| tests.pt(x + a, y + 5, -1) }
+          bores = holes.map { |p| tests.pt(p.x, p.y, 2) }
+          [tests.box(m.entities, x, y, 0, 24, 10, 3),
+           [['subtract', tests.cylinders(m.entities, holes, Z_AXIS, 1, 5)],
+            ['subtract', tests.cylinders(m.entities, bores, Z_AXIS, 2, 2)]]]
+        end],
+        ['holes on the top and on a side', lambda do |m, x, y|
+          top = [[5, 5], [15, 5], [5, 15], [15, 15]].map { |a, b| tests.pt(x + a, y + b, -1) }
+          side = [3, 7].map { |h| tests.pt(x - 1, y + 10, h) }
+          [tests.box(m.entities, x, y, 0, 20, 20, 10),
+           [['subtract', tests.cylinders(m.entities, top, Z_AXIS, 1, 12)],
+            ['subtract', tests.cylinders(m.entities, side, X_AXIS, 1, 22)]]]
+        end],
+        ['truncated cones', lambda do |m, x, y|
+          cones = [[5, 5], [15, 5], [5, 15]].map { |a, b| tests.pt(x + a, y + b, -1) }
+          [tests.box(m.entities, x, y, 0, 20, 20, 3),
+           [['subtract', tests.cones(m.entities, cones, 1.5, 0.7, 5)],
+            ['subtract', tests.cylinders(m.entities, [tests.pt(x + 15, y + 15, -1)], Z_AXIS, 1, 5)]]]
+        end],
+        ['pins added by union (one end broken)', lambda do |m, x, y|
+          centers = [[5, 5], [15, 5], [5, 15], [15, 15]].map { |a, b| tests.pt(x + a, y + b, 1) }
+          [tests.box(m.entities, x, y, 0, 20, 20, 2),
+           [['union', tests.cylinders(m.entities, centers, Z_AXIS, 1, 4)]]]
+        end],
+        ['blind holes', lambda do |m, x, y|
+          centers = [[5, 5], [15, 5], [5, 15], [15, 15]].map { |a, b| tests.pt(x + a, y + b, 2) }
+          [tests.box(m.entities, x, y, 0, 20, 20, 4),
+           [['subtract', tests.cylinders(m.entities, centers, Z_AXIS, 1, 3)]]]
+        end]
+      ]
+      repair_cases.each_with_index do |(name, build), i|
+        test "T12 repair_holes: #{name}" do |c, model|
+          next c.skip(NO_BOOLEANS) unless tests.pro?
+          definitions = model.definitions.to_a
+          acc, failed = tests.setup(model) do
+            base, steps = build.call(model, i * 250, 1000)
+            tests.run_steps(model, base, steps)
+          end
+          # Native booleans with a tool of several solids leave unused
+          # definitions (TempInstance#n): removed here when the API allows it.
+          temp = (model.definitions.to_a - definitions).select { |d| !d.group? && d.count_instances.zero? }
+          unless temp.empty?
+            removable = model.definitions.respond_to?(:remove)
+            c.note("the boolean left #{temp.length} unused definition(s) #{temp.first.name}..." \
+                   "#{removable ? ' (removed by the test)' : ''}")
+            temp.each { |d| model.definitions.remove(d) } if removable
+          end
+          next c.check(false, "boolean #{failed} failed") if failed
+          c.check(acc.manifold?, 'boolean result is a solid')
+          broken = tests.arc_edges(tests.inner(acc))
+          sig = {}
+          counts = {}
+          stats = {}
+          times = {}
+          [:scan, :plugin].each do |mode|
+            tests.force_repair(mode)
+            model.start_operation('Solid Batch tests — repair_holes', true)
+            begin
+              started = Time.now
+              res = CircleRestore.restore_in_solid(acc, min_arc_segments: SolidBatch.min_arc_segments)
+              times[mode] = Time.now - started
+              sig[mode] = tests.shape_signature(acc)
+              counts[mode] = [res[:native], res[:welded], res[:unwelded], res[:reasons].to_a.sort]
+              stats[mode] = tests.repair_stats.dup
+              c.note("restore: #{CircleRestore.summary(res, reasons: true)}") if mode == :plugin
+            ensure
+              model.abort_operation
+              tests.restore_repair
+            end
+          end
+          c.check(stats[:scan][:holes] > 0,
+                  "repair_holes used (#{stats[:scan][:calls]} calls, #{stats[:scan][:holes]} holes)")
+          c.check(sig[:scan] == sig[:plugin], 'same faces, edges and circles as the former method',
+                  tests.signature_diff(sig[:scan], sig[:plugin]))
+          c.check(counts[:scan] == counts[:plugin], 'same restore counts',
+                  "#{counts[:scan].inspect} / #{counts[:plugin].inspect}")
+          c.check(stats[:scan].values_at(:calls, :holes) == stats[:plugin].values_at(:calls, :holes),
+                  'same repair_holes calls')
+          c.check(counts[:plugin][0] > 0 && sig[:plugin][:manifold], 'native circles rebuilt, still a solid',
+                  counts[:plugin].inspect)
+          c.note(format('arc edges before %d, after %d; restore: former %.2fs (repair_holes %.2fs), ' \
+                        'plugin %.2fs (repair_holes %.2fs)', broken, sig[:plugin][:arc_edges],
+                        times[:scan], stats[:scan][:time], times[:plugin], stats[:plugin][:time]))
+          if i.zero? && CircleRestore::Volume.respond_to?(:near_items)
+            c.check(stats[:plugin][:time] < stats[:scan][:time] / 2, 'plugin repair_holes at least twice faster')
+          end
+        end
       end
     end
 

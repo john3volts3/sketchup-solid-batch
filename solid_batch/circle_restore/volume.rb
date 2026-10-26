@@ -3,6 +3,10 @@
 # namespace: SolidBatch::CircleRestore instead of ReCercle. Solid Batch does
 # not depend on Re-Cercle.
 #
+# Since Solid Batch 2.4.0, repair_holes finds the hole edges through
+# grids instead of scanning every edge for every hole (same result, much
+# faster on a face with many holes): code of Solid for Maker 1.0.0.
+#
 # Native rebuild of straight cylinders and truncated cones (holes, pins)
 # whose end circle is broken, with the same segment count. Adapted from
 # Circle Re-Segment (detector and Push/Pull rebuild), validated there:
@@ -369,23 +373,77 @@ module SolidBatch
       # without being split: find_faces on one hole edge splits it (no edge is
       # erased, so the hole circle stays native), then new faces filling a
       # former hole are erased.
+      #
+      # Hole points and vertices are indexed once in grids of tolerance-sized
+      # cells (Solid for Maker): scanning every edge for every hole made a
+      # plate with many holes take about 1 s per rebuilt cylinder.
       def self.repair_holes(entities, holes, existing)
         tol = Detector::BASE_TOL * 10
-        near = ->(p, h) { h.any? { |q| p.distance(q) < tol } }
-        holes.each do |h|
-          edge = entities.grep(Sketchup::Edge).find do |ed|
-            near.call(ed.start.position, h) && near.call(ed.end.position, h)
-          end
+        hole_grids = holes.map { |h| point_grid(h, tol) }
+        vertex_grid = {}
+        entities.grep(Sketchup::Edge).flat_map(&:vertices).uniq.each do |v|
+          (vertex_grid[cell_of(v.position, tol)] ||= []) << v
+        end
+        holes.each_with_index do |h, i|
+          edge = hole_edge(h, hole_grids[i], vertex_grid, tol)
           edge.find_faces if edge
         end
         entities.grep(Sketchup::Face).each do |f|
           next if !f.valid? || existing[f.entityID]
           pts = f.outer_loop.vertices.map(&:position)
-          filled = holes.any? do |h|
-            h.length == pts.length && pts.all? { |p| near.call(p, h) }
+          filled = holes.each_with_index.any? do |h, i|
+            h.length == pts.length && pts.all? { |p| near_grid?(p, hole_grids[i], tol) }
           end
           f.erase! if filled
         end
+      end
+
+      # An edge whose both ends lie on the hole points (any of them suits
+      # find_faces), found through the vertices near the hole points.
+      def self.hole_edge(points, grid, vertex_grid, tol)
+        points.each do |q|
+          near_items(q, vertex_grid, tol) { |v| v.position }.each do |v|
+            v.edges.each do |ed|
+              return ed if near_grid?(ed.other_vertex(v).position, grid, tol)
+            end
+          end
+        end
+        nil
+      end
+
+      # Grid of points: cell => points of that cell.
+      def self.point_grid(points, tol)
+        grid = {}
+        points.each { |p| (grid[cell_of(p, tol)] ||= []) << p }
+        grid
+      end
+
+      def self.cell_of(p, tol)
+        [(p.x.to_f / tol).floor, (p.y.to_f / tol).floor, (p.z.to_f / tol).floor]
+      end
+
+      # Items of the grid closer than tol to p: with tol-sized cells they lie
+      # in the 27 cells around p's cell.
+      def self.near_items(p, grid, tol)
+        cx, cy, cz = cell_of(p, tol)
+        found = []
+        (-1..1).each do |dx|
+          (-1..1).each do |dy|
+            (-1..1).each do |dz|
+              items = grid[[cx + dx, cy + dy, cz + dz]]
+              next unless items
+              items.each do |item|
+                position = block_given? ? yield(item) : item
+                found << item if p.distance(position) < tol
+              end
+            end
+          end
+        end
+        found
+      end
+
+      def self.near_grid?(p, grid, tol)
+        !near_items(p, grid, tol).empty?
       end
     end
   end
