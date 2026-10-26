@@ -1,6 +1,6 @@
 # Solid Batch — Specification Fonctionnelle Detaillee
 
-**Version :** 2.4.0
+**Version :** 2.4.1
 **Date :** 2026-10-26
 **Auteur :** DRO
 
@@ -56,7 +56,7 @@ Solid Batch est un plugin SketchUp Pro qui permet d'effectuer des operations boo
 | **Traitement** | 1. Separer la selection en solides de base et solides-outils par couleur de soustraction. 2. Fusionner sequentiellement tous les solides de base avec `Group#union`. 3. Soustraire sequentiellement tous les solides-outils avec `Group#subtract`. |
 | **Sortie** | Un seul groupe/composant solide contenant le resultat |
 | **Annulation** | L'operation entiere est annulee par un seul Ctrl+Z |
-| **Gestion d'erreur** | Si une etape echoue, abandonner et annuler ; afficher un message d'erreur avec le numero d'etape |
+| **Gestion d'erreur** | Si une étape échoue (résultat nul ou non solide, ou erreur) : l'étape est annulée et, avec elle, toutes les étapes déjà faites (SketchUp annule toute la chaîne d'opérations enchaînées, vérifié par T14) ; le modèle revient comme avant Combine All, l'action précédente de l'utilisateur reste. Message : étape n sur N, opération (ex. « Subtract 2 of 3 »), solide (nom, position), raison ; ce solide est sélectionné |
 
 #### EF-02 : Combine All (Shell)
 
@@ -130,7 +130,7 @@ Solid Batch est un plugin SketchUp Pro qui permet d'effectuer des operations boo
 | ENF-04 | Journalisation console (`puts`) pour chaque etape d'operation pour le debogage |
 | ENF-05 | Gestion d'erreur gracieuse avec abandon + annulation en cas d'echec |
 | ENF-06 | Affichage de la progression dans la barre de statut pendant les operations batch (`Solid Batch — Subtract 7/13 (54%)`) |
-| ENF-07 | Operations transparentes : chaque etape booleenne a son propre start/commit (petits deltas rapides) chainees via `transparent = true` pour un seul undo |
+| ENF-07 | Operations transparentes : chaque etape booleenne a son propre start/commit (petits deltas rapides) chainees via `transparent = true` pour un seul undo ; annuler l'étape en cours annule toute la chaîne (T14) |
 | ENF-08 | Restauration des cercles et arcs applicable uniquement à la fin (Phase 3), jamais à chaque étape intermédiaire — performance et fiabilité |
 | ENF-09 | Les seuils `large_threshold`, `auto_repair_large` et `min_arc_segments` persistent dans le registre SketchUp |
 | ENF-10 | Chaque chaîne est redétectée juste avant sa reconstruction (reconstruire un cylindre reconstruit aussi son autre extrémité) ; chaque reconstruction native est vérifiée |
@@ -196,6 +196,8 @@ SolidBatch                  # Namespace principal
   do_set_repair_options()     # Configurer auto-repair + seuil + min segments arc
   pro_only(line)              # Message « PRO Only » (EF-07)
   ruby_boolean(op, base, other) # Booléen du moteur Ruby (solid_operations.rb)
+  step_info / solid_label     # Étape en cours et solide (nom, position), pour le message d'échec
+  combine_failed(...)         # Échec d'une étape : tout annuler, message, solide sélectionné
 
 SolidBatch::SolidOperations # Moteur booléen Ruby (copie de Solid for Maker 1.0.1, MIT)
 
@@ -316,9 +318,10 @@ Tous les messages utilisateur utilisent `UI.messagebox` avec `MB_OK`. Les messag
 | Moins de 2 solides selectionnes | Afficher le decompte, abandonner |
 | Sans SketchUp Pro (Make, Free) | Afficher « PRO Only », abandonner (rien n'est modifié) |
 | Tous les solides ont la couleur de soustraction | Afficher "aucun objet de base", abandonner |
-| Etape booleenne echoue (resultat nil/invalide) | Abandonner l'operation (annuler tous les changements), afficher le numero d'etape |
+| Etape booleenne echoue (resultat nil/invalide) | Annuler l'étape et les étapes déjà faites (modèle comme avant), message : étape n/N, opération, solide (nom, position), raison ; solide sélectionné |
 | Echec de la restauration des cercles/arcs (Phase 3) | Annuler la Phase 3 seule (résultat booléen conservé, cercles laissés dans leur état), journaliser la backtrace, afficher un message |
-| Exception inattendue | Abandonner l'operation, journaliser la backtrace (10 premieres lignes), afficher le message d'erreur |
+| Exception pendant une étape | Comme un échec d'étape, avec le message de l'erreur ; entre deux étapes (aucune opération ouverte), les étapes déjà faites sont annulées par `Sketchup.undo` ; backtrace (10 premières lignes) dans la console |
+| Exception inattendue hors étape | Abandonner l'operation ouverte, journaliser la backtrace, afficher le message d'erreur |
 
 ## 9. Historique des versions
 
@@ -331,3 +334,4 @@ Tous les messages utilisateur utilisent `UI.messagebox` avec `MB_OK`. Les messag
 | 2.2.1 | 2026-04-12 | Rétrocompatibilité SketchUp Pro 2017+. Remplacement de la safe navigation Ruby 2.3 (`&.`) par des checks nil classiques pour compatibilité Ruby 2.2. Ajout guard `respond_to?(:weld)` dans `CircleRestore` — Phase 3 silencieusement ignorée sur SketchUp < 2020.1. Menu/toolbar Set Repair Options masqués sur versions < 2020.1. |
 | 2.3.0 | 2026-10-11 | Phase 3 reconstruite sur la méthode de Re-Cercle v2.0.0, copiée dans le plugin (`solid_batch/circle_restore/`, aucune dépendance) : les cercles et arcs cassés deviennent des `ArcCurve` **natives** (inférence du centre) — reconstruction plane, reconstruction Push/Pull des cylindres et troncs de cône (trous, tenons) — la soudure n'est plus qu'un secours (raison journalisée). Détection par chaînes de segments égaux (tolérance `max(0.001", 0,5 % r)`), cercles ≥ 6 segments, `min_arc_segments` par défaut 8 → 6. Vérification après reconstruction ; un échec de la Phase 3 n'annule que la Phase 3 (résultat booléen conservé). `restore_in_solid` retourne `{native:, welded:, unwelded:, reasons:}` ; bilan console et barre de statut. |
 | 2.4.0 | 2026-10-26 | Cercles et arcs natifs aussi avant SketchUp 2020.1 (la garde `weld` ne bloque plus que la soudure de secours) ; *Set Repair Options* dans toutes les versions. `repair_holes` accéléré par des grilles (résultat identique ; plaque à 20 trous 9,6 → 2,2 s). Sans SketchUp Pro, Combine All affiche « PRO Only » (un seul contrôle de l'édition, `Sketchup.is_pro?`) ; contrôle `respond_to?(mode)` retiré. Ajout de `solid_operations.rb` (moteur booléen Ruby de Solid for Maker 1.0.1, Eneroth Solid Tools, MIT). Batterie de tests automatique `tools/tests` (SketchUp 2021 et Make 2017). |
+| 2.4.1 | 2026-10-26 | Échec d'une étape de Combine All : message clair (étape n/N, opération, solide avec nom et position, raison), solide de l'étape sélectionné, modèle inchangé (vérifié : SketchUp annule toute la chaîne, T14 ; échecs forcés au début, au milieu, à la fin et erreur Ruby, T13). Erreur entre deux étapes : étapes déjà faites annulées. |

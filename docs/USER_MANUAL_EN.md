@@ -166,11 +166,14 @@ Your selection contains fewer than 2 valid solids. Check that:
 ### "No base objects found"
 All selected objects have the subtract color. At least one object must have a different color to serve as the base.
 
-### Operation fails at a specific step
-One of the boolean operations failed. This usually means:
-- Two solids don't intersect (nothing to union/subtract)
-- The geometry is too complex or has coplanar faces
-- Try reordering or simplifying the problematic solids
+### "Combine All failed at step 3 of 5: Subtract 2 of 4, group "…" at (…)"
+One of the boolean operations could not give a valid solid. **Nothing was changed**: the steps already done are undone too, and the model is exactly as it was before Combine All. The message names the step (its number, the operation) and the solid of that step (its name and position), and that solid is **selected**.
+
+What to check on the selected solid:
+- It is a valid solid (Entity Info shows "Solid Group" or "Solid Component")
+- Its faces are not flush with the faces of the other solids (move it slightly, or make it a little longer so that it goes through)
+- The geometry is not too thin or too complex
+- Then run Combine All again
 
 ### "Circle and arc restoration failed"
 A circle could not be rebuilt. Only the restoration is undone: the Combine All result is kept and its circles stay as they were. The Ruby Console shows the details.

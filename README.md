@@ -16,7 +16,7 @@ When designing technical parts for 3D printing in SketchUp, a common workflow is
 
 ## Features
 
-- **Combine All (Union)** — Select multiple solids, automatically union all base solids then subtract color-marked objects. Single undo step.
+- **Combine All (Union)** — Select multiple solids, automatically union all base solids then subtract color-marked objects. Single undo step. If a step fails, nothing is changed: the message names the step and the solid, which is selected.
 - **Combine All (Shell)** — Same workflow using Outer Shell instead of Union (merges overlapping volumes into one shell).
 - **Automatic circle and arc restoration** — Native boolean operations break circles and arcs into individual segments. At the end of every Combine All, Solid Batch rebuilds them as **native SketchUp circles and arcs** (center inference, radius and segments in Entity Info): holes, pins, cylinders and truncated cones get native end circles. When a native rebuild is not possible (e.g. arcs of a rounded edge), the segments are welded into a single-click selectable curve.
 - **Set Subtract Color** — Pick a color from a selected object to mark which solids should be subtracted during Combine All operations.
@@ -81,7 +81,7 @@ Lors de la conception de pieces techniques pour l'impression 3D dans SketchUp, u
 
 ## Fonctionnalites
 
-- **Combine All (Union)** — Selectionnez plusieurs solides, fusionne automatiquement les solides de base puis soustrait les objets marques par couleur. Une seule etape d'annulation.
+- **Combine All (Union)** — Selectionnez plusieurs solides, fusionne automatiquement les solides de base puis soustrait les objets marques par couleur. Une seule etape d'annulation. Si une étape échoue, rien n'est modifié : le message nomme l'étape et le solide, qui est sélectionné.
 - **Combine All (Shell)** — Meme principe avec Outer Shell au lieu de Union (fusionne les volumes en une seule coque).
 - **Restauration automatique des cercles et des arcs** — Les opérations booléennes natives cassent les cercles et les arcs en segments individuels. À la fin de chaque Combine All, Solid Batch les reconstruit en **vrais cercles et arcs natifs** de SketchUp (inférence du centre, rayon et segments dans *Infos sur l'entité*) : trous, tenons, cylindres et troncs de cône retrouvent des cercles natifs à leurs extrémités. Quand la reconstruction native est impossible (ex. arcs d'une arête arrondie), les segments sont soudés en une courbe sélectionnable en un clic.
 - **Set Subtract Color** — Choisissez une couleur depuis un objet selectionne pour marquer les solides a soustraire.

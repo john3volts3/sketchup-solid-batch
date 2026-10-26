@@ -1,6 +1,6 @@
 # Solid Batch — Document des exigences produit (PRD)
 
-Version du document : 2026-10-26 (livraison 2.4.0). Le *quoi* et le *pourquoi* ; le *comment* est dans `docs/FSD_FR.md` / `docs/FSD_EN.md`.
+Version du document : 2026-10-26 (livraison 2.4.1). Le *quoi* et le *pourquoi* ; le *comment* est dans `docs/FSD_FR.md` / `docs/FSD_EN.md`.
 
 ## 1. Contexte et problème
 
@@ -58,6 +58,7 @@ Pour concevoir des pièces techniques (impression 3D, assemblages) dans SketchUp
 | NF-07 | Batterie de tests automatique (`tools/tests`), SketchUp 2021 et Make 2017, aucune écriture dans les réglages du PC | livrée en v2.4.0 |
 | NF-08 | Libellés à l'écran en anglais ; nom affiché « Solid Batch » identique partout (extension, menu, barre d'outils, registre `SolidBatch`, console) | livrée en v2.0.0 |
 | NF-09 | Dépôt public : aucun chemin local, nom d'utilisateur ou adresse dans les fichiers suivis | livrée en v2.3.0 |
+| NF-10 | Échec d'une étape de Combine All : le modèle revient exactement comme avant (étapes déjà faites annulées, action précédente de l'utilisateur gardée) ; le message nomme l'étape (numéro, opération), le solide (nom, position) et la raison ; ce solide est sélectionné | livrée en v2.4.1 |
 
 ## 7. Contraintes et dépendances
 
@@ -78,12 +79,13 @@ Pour concevoir des pièces techniques (impression 3D, assemblages) dans SketchUp
 | EF-07 | T10 : sans Pro, message « PRO Only », rien de modifié |
 | NF-01, NF-02 | T11, T12 : grilles = parcours complet ; 13 cas identiques ancienne / nouvelle méthode ; plaque à 20 trous au moins 2 fois plus rapide |
 | NF-05, NF-07 | Batterie sans échec sous SketchUp 2021 et Make 2017 |
+| NF-10 | T13 : échec forcé à la première étape, au milieu, à la dernière, et erreur Ruby → mêmes solides et volumes qu'avant, action précédente gardée, message de l'étape, solide sélectionné ; T14 : annuler une opération enchaînée annule toute la chaîne, et seulement elle |
 
 ## 9. Questions ouvertes et décisions
 
 - **Décision (2026-10-26)** : le moteur booléen Ruby de Solid for Maker 1.0.1 est copié dans le plugin (`solid_operations.rb`, MIT) ; sous SketchUp Pro, les booléens natifs restent seuls utilisés. Cette décision remplace celle du 2026-04-12 (code sans Eneroth Solid Tools).
 - **Décision (2026-10-26)** : version 2.4.0, outils de test dans le dépôt public, release GitHub avec le `.rbz`.
-- **Question ouverte** : si une étape booléenne échoue au milieu d'un lot, seule cette étape est annulée ; les étapes déjà faites restent (un Ctrl+Z les annule). À décider : tout annuler automatiquement ?
+- **Décision (2026-10-26, 2.4.1)** : en cas d'échec d'une étape, le modèle revient comme avant et un message clair nomme l'étape et le solide, qui est sélectionné. Vérifié par la batterie : SketchUp annule déjà toute la chaîne d'étapes quand l'étape qui échoue est annulée (T14) ; le constat inverse, écrit à la livraison 2.4.0, était faux.
 - **Question ouverte** : règles de l'Extension Warehouse sur le code tiers sous licence MIT (non vérifiées).
 
 ## 10. Historique des livraisons
@@ -96,4 +98,5 @@ Pour concevoir des pièces techniques (impression 3D, assemblages) dans SketchUp
 | 2026-04-11 | 2.2.0 | `0bfc19f` | EF-05 (arcs) |
 | 2026-04-12 | 2.2.1 | `bb9d8c7` | NF-05 (SketchUp Pro 2017, Ruby 2.2) |
 | 2026-10-11 | 2.3.0 | `13748c4` | EF-05 (cercles natifs, méthode de Re-Cercle), NF-06, NF-09 |
-| 2026-10-26 | 2.4.0 | voir l'étiquette `v2.4.0` | EF-04 et EF-05 dans toutes les versions, EF-07, NF-01, NF-02, NF-05 (étendue), NF-06 (moteur Ruby), NF-07 |
+| 2026-10-26 | 2.4.0 | `5f57c96` | EF-04 et EF-05 dans toutes les versions, EF-07, NF-01, NF-02, NF-05 (étendue), NF-06 (moteur Ruby), NF-07 |
+| 2026-10-26 | 2.4.1 | voir l'étiquette `v2.4.1` | NF-10 |

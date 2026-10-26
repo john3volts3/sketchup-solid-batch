@@ -425,6 +425,49 @@ module SolidBatch
       4000 - 2 * prism_area(2, 24) * 10
     end
 
+    # T13: the plate with its 2 holes, a box united to it and a third hole:
+    # Union 1 of 1, then Subtract 1, 2 and 3 of 3.
+    def self.failing_case(model, y)
+      plate, holes = plate_with_holes(model, y)
+      extra = cylinder(model.entities, 10, y + 10, -2, 1.5, 14, subtract_material(model))
+      [plate, box(model.entities, 15, y, 0, 10, 10, 10, base_material(model))] + holes + [extra]
+    end
+
+    # Volumes of the groups in the band of y, sorted.
+    def self.band_state(model, y)
+      groups_in(model, y).map { |g| g.volume.round(3) }.sort
+    end
+
+    # The call number +nth+ of the native +op+ (:union or :subtract) on the
+    # solids does the boolean, then fails (:nil: returns nil; :raise: raises).
+    # Returns { pid: persistent_id of the solid of the failed step }.
+    def self.force_failure(solids, op, nth, how)
+      failed = {}
+      calls = [0]
+      solids.each do |s|
+        s.define_singleton_method(op) do |other|
+          # Native union: the receiver is the base, the solid of the step is
+          # the other one; native subtract: the receiver is the tool. Read
+          # before the boolean, which erases it.
+          solid = op == :union ? other : self
+          pid = solid.respond_to?(:persistent_id) ? solid.persistent_id : nil
+          res = super(other)
+          calls[0] += 1
+          next res unless calls[0] == nth
+          failed[:pid] = pid
+          raise 'test failure' if how == :raise
+          nil
+        end
+      end
+      failed
+    end
+
+    def self.remove_failure(solids, op)
+      solids.each do |s|
+        s.singleton_class.send(:remove_method, op) if s.singleton_methods.include?(op)
+      end
+    end
+
     def self.material(model, name, rgb)
       m = model.materials[name] || model.materials.add(name)
       m.color = Sketchup::Color.new(*rgb)
@@ -966,6 +1009,70 @@ module SolidBatch
       end
       # Also used by the local tests.
       @repair_cases = repair_cases
+
+      # T14: SketchUp itself: aborting an operation chained (transparent) to
+      # committed ones, as in Combine All, undoes the whole chain, and only it
+      # (combine_failed relies on it).
+      test 'T14 SketchUp: abort of a chained (transparent) operation undoes the chain' do |c, model|
+        y = 2400
+        marker = tests.setup(model) { tests.box(model.entities, 0, y, 0, 5, 5, 5) }
+        boxes = []
+        3.times do |k|
+          model.start_operation('Solid Batch tests — chain', true, false, k > 0)
+          boxes << tests.box(model.entities, 10 * (k + 1), y, 0, 5, 5, 5)
+          model.commit_operation
+        end
+        model.start_operation('Solid Batch tests — chain', true, false, true)
+        aborted = tests.box(model.entities, 40, y, 0, 5, 5, 5)
+        model.abort_operation
+        state = "marker #{marker.valid?}, committed boxes #{boxes.map(&:valid?).inspect}, " \
+                "aborted box #{aborted.valid?}, groups in the band #{tests.groups_in(model, y).length}"
+        c.check(boxes.none?(&:valid?) && !aborted.valid?, 'the 3 committed operations of the chain are undone', state)
+        c.check(marker.valid? && tests.groups_in(model, y).length == 1, 'the operation before the chain stays', state)
+        c.later do
+          c.check(marker.valid? && tests.groups_in(model, y).length == 1, 'still so a while later')
+        end
+      end
+
+      # T13: one step of Combine All fails (forced on the solids of the test):
+      # the steps already done are undone too, the message names the step and
+      # the solid of that step is selected; the action done before Combine
+      # All stays. Steps: Union 1 of 1, then Subtract 1, 2 and 3 of 3.
+      failures = [
+        [1, :union, 'Union 1 of 1', :nil],
+        [3, :subtract, 'Subtract 2 of 3', :nil],
+        [4, :subtract, 'Subtract 3 of 3', :nil],
+        [3, :subtract, 'Subtract 2 of 3', :raise]
+      ]
+      failures.each_with_index do |(failing, op, action, how), k|
+        test "T13 Combine All fails at step #{failing} of 4 (#{action}, #{how}): nothing changed" do |c, model|
+          next c.skip(NO_BOOLEANS) unless tests.pro?
+          y = 2100 + 60 * k
+          solids = tests.setup(model) { tests.failing_case(model, y) }
+          marker = tests.setup(model) { tests.box(model.entities, 60, y, 0, 5, 5, 5) }
+          before = tests.band_state(model, y)
+          failed = tests.force_failure(solids, op, op == :union ? 1 : failing - 1, how)
+          begin
+            tests.combine(model, :union, solids)
+          ensure
+            tests.remove_failure(solids, op)
+          end
+          message = tests.messages.first.to_s
+          c.check(tests.messages.length == 1 && message.include?("failed at step #{failing} of 4: #{action},"),
+                  "message names the step: #{action}", message)
+          c.check(message.include?('Nothing was changed'), 'message: nothing was changed')
+          c.check(how != :raise || message.include?('Error: test failure'), 'message gives the error')
+          c.check(tests.band_state(model, y) == before, 'the solids are as before (count, volumes)',
+                  "#{before.inspect} / #{tests.band_state(model, y).inspect}")
+          c.check(marker.valid?, 'the action before Combine All is not undone')
+          sel = model.selection.to_a
+          c.check(sel.length == 1 && failed[:pid] && sel.first.persistent_id == failed[:pid],
+                  'the solid of the failed step is selected', sel.map { |e| e.class.name }.join(', '))
+          c.later do
+            c.check(tests.band_state(model, y) == before && marker.valid?, 'still as before after a while')
+          end
+        end
+      end
 
       # Extra tests kept on this PC only (optional file, not in the repository).
       local = File.join(TESTS_DIR, 'local', 'local_tests.rb')

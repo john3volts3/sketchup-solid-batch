@@ -236,6 +236,11 @@ module SolidBatch
     first_op = true
     total_steps = (union_solids.length > 1 ? union_solids.length - 1 : 0) + subtract_solids.length
     current_step = 0
+    # Step in progress (for the message of a failure), operation open,
+    # operations committed (undone together if a later step fails).
+    step = nil
+    open_op = false
+    committed = 0
     begin
       # Phase 1: Union/Shell all non-subtract solids
       result = union_solids[0]
@@ -245,16 +250,19 @@ module SolidBatch
           current_step += 1
           pct = (current_step * 100.0 / total_steps).round
           Sketchup.status_text = "Solid Batch — #{mode_label} #{current_step}/#{total_steps} (#{pct}%)"
+          step = step_info(current_step, total_steps, "#{mode_label} #{i + 1} of #{union_solids.length - 1}", other)
           model.start_operation(op_name, true, false, !first_op)
           first_op = false
+          open_op = true
           model.selection.clear
           result = ruby ? ruby_boolean(mode, result, other) : result.send(mode, other)
           unless result && result.valid?
-            model.abort_operation
-            UI.messagebox("Combine All failed at #{mode_label} step #{i + 1}.", MB_OK)
+            combine_failed(model, open_op, committed, step, 'The result was not a valid solid.')
             return
           end
           model.commit_operation
+          open_op = false
+          committed += 1
         end
       else
         puts "[Solid Batch]   Phase 1: Single base solid, skipping #{mode_label}"
@@ -269,18 +277,22 @@ module SolidBatch
           current_step += 1
           pct = (current_step * 100.0 / total_steps).round
           Sketchup.status_text = "Solid Batch — Subtract #{current_step}/#{total_steps} (#{pct}%)"
+          step = step_info(current_step, total_steps, "Subtract #{i + 1} of #{subtract_solids.length}", tool)
           model.start_operation(op_name, true, false, !first_op)
           first_op = false
+          open_op = true
           model.selection.clear
           result = ruby ? ruby_boolean(:subtract, result, tool) : tool.subtract(result)
           unless result && result.valid?
-            model.abort_operation
-            UI.messagebox("Combine All failed at subtract step #{i + 1}.", MB_OK)
+            combine_failed(model, open_op, committed, step, 'The result was not a valid solid.')
             return
           end
           model.commit_operation
+          open_op = false
+          committed += 1
         end
       end
+      step = nil
 
       # Phase 3: Circle and arc restoration on the final result
       skip_message = nil
@@ -330,10 +342,68 @@ module SolidBatch
 
       UI.messagebox(skip_message, MB_OK) if skip_message
     rescue => e
-      model.abort_operation
       puts "[Solid Batch] Combine All error: #{e.message}"
       e.backtrace.first(10).each { |line| puts "  #{line}" }
-      UI.messagebox("Combine All error: #{e.message}", MB_OK)
+      if step
+        combine_failed(model, open_op, committed, step, "Error: #{e.message}")
+      else
+        model.abort_operation if open_op
+        UI.messagebox("Combine All error: #{e.message}", MB_OK)
+      end
     end
+  end
+
+  # One step of Combine All, for the message of a failure.
+  def self.step_info(number, total, action, solid)
+    pid = solid.respond_to?(:persistent_id) ? solid.persistent_id : nil
+    { number: number, total: total, action: action, solid: solid, pid: pid, label: solid_label(solid) }
+  end
+
+  # group "Name" at (x; y; z): center of its bounds, in model units
+  # (semicolons: the decimal separator may be a comma).
+  def self.solid_label(solid)
+    kind = solid.is_a?(Sketchup::Group) ? 'group' : 'component'
+    name = solid.name.to_s
+    name = solid.definition.name.to_s if name.empty? && solid.is_a?(Sketchup::ComponentInstance)
+    c = solid.bounds.center
+    where = "at (#{c.x.to_l}; #{c.y.to_l}; #{c.z.to_l})"
+    name.empty? ? "#{kind} #{where}" : "#{kind} \"#{name}\" #{where}"
+  end
+
+  # A step of Combine All failed: the steps already done are undone too, so
+  # that the model is back as it was before Combine All. Aborting an operation
+  # chained (transparent) to committed ones undoes the whole chain (checked by
+  # the tests, T14); without an open operation, the committed steps are the
+  # last undo step. The message names the step; its solid is selected.
+  def self.combine_failed(model, open_op, committed, step, reason)
+    undone = open_op || committed.zero?
+    if open_op
+      model.abort_operation
+    elsif committed > 0 && Sketchup.respond_to?(:undo)
+      Sketchup.undo
+      undone = true
+    end
+    solid = step[:solid].valid? ? step[:solid] : find_by_persistent_id(model, step[:pid])
+    model.selection.clear
+    model.selection.add(solid) if solid
+    text = "Combine All failed at step #{step[:number]} of #{step[:total]}: " \
+           "#{step[:action]}, #{step[:label]}.\n#{reason}\n\n"
+    text += if undone
+              'Nothing was changed: the model is as it was before Combine All.'
+            else
+              "The #{committed} step(s) before it were applied: press Ctrl+Z to undo them."
+            end
+    if solid
+      text += "\n\nThis solid is now selected: check that it is a solid (Entity Info) " \
+              'and that its faces are not flush with the faces of the other solids.'
+    end
+    puts "[Solid Batch] #{text.tr("\n", ' ').squeeze(' ')}"
+    Sketchup.status_text = "Solid Batch — Failed at step #{step[:number]}/#{step[:total]}"
+    UI.messagebox(text, MB_OK)
+  end
+
+  def self.find_by_persistent_id(model, pid)
+    return nil unless pid
+    model.active_entities.find { |e| e.respond_to?(:persistent_id) && e.persistent_id == pid }
   end
 end

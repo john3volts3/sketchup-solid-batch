@@ -1,6 +1,6 @@
 # Solid Batch — Functional Specification Document
 
-**Version:** 2.4.0
+**Version:** 2.4.1
 **Date:** 2026-10-26
 **Author:** DRO
 
@@ -56,7 +56,7 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | **Process** | 1. Separate selection into base solids and tool solids by subtract color. 2. Sequentially union all base solids using `Group#union`. 3. Sequentially subtract all tool solids using `Group#subtract`. |
 | **Output** | A single solid group/component containing the result |
 | **Undo** | Entire operation reverts with a single Ctrl+Z |
-| **Error handling** | If any step fails, abort and revert; show error message with step number |
+| **Error handling** | If a step fails (nil or non-solid result, or error): the step is aborted and, with it, every step already done (SketchUp undoes the whole chain of chained operations, checked by T14); the model is back as it was before Combine All, the previous action of the user stays. Message: step n of N, operation (e.g. "Subtract 2 of 3"), solid (name, position), reason; that solid is selected |
 
 #### FR-02: Combine All (Shell)
 
@@ -130,7 +130,7 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | NFR-04 | Console logging (`puts`) for each operation step for debugging |
 | NFR-05 | Graceful error handling with abort + revert on failure |
 | NFR-06 | Status bar progress display during batch operations (`Solid Batch — Subtract 7/13 (54%)`) |
-| NFR-07 | Transparent operations: each boolean step has its own start/commit (fast small deltas) chained via `transparent = true` for single undo |
+| NFR-07 | Transparent operations: each boolean step has its own start/commit (fast small deltas) chained via `transparent = true` for single undo; aborting the current step undoes the whole chain (T14) |
 | NFR-08 | Circle and arc restoration applied only at the end (Phase 3), never on intermediate steps — for performance and reliability |
 | NFR-09 | The `large_threshold`, `auto_repair_large` and `min_arc_segments` settings persist in the SketchUp registry |
 | NFR-10 | Each chain is detected again just before its rebuild (rebuilding a cylinder also rebuilds its other end); each native rebuild is checked |
@@ -196,6 +196,8 @@ SolidBatch                  # Top-level namespace
   do_set_repair_options()     # Configure auto-repair + threshold + min arc segments
   pro_only(line)              # "PRO Only" message (FR-07)
   ruby_boolean(op, base, other) # Boolean of the Ruby engine (solid_operations.rb)
+  step_info / solid_label     # Current step and solid (name, position), for the failure message
+  combine_failed(...)         # Failed step: undo everything, message, solid selected
 
 SolidBatch::SolidOperations # Ruby boolean engine (copy of Solid for Maker 1.0.1, MIT)
 
@@ -316,9 +318,10 @@ All user-facing messages use `UI.messagebox` with `MB_OK`. Error messages includ
 | Fewer than 2 solids selected | Show count message, abort |
 | Without SketchUp Pro (Make, Free) | Show "PRO Only" message, abort (nothing changed) |
 | All solids have subtract color | Show "no base objects" message, abort |
-| Boolean step fails (nil/invalid result) | Abort operation (revert all changes), show step number |
+| Boolean step fails (nil/invalid result) | Abort the step and the steps already done (model as before), message: step n/N, operation, solid (name, position), reason; solid selected |
 | Circle/arc restoration fails (Phase 3) | Abort Phase 3 only (boolean result kept, circles left as they were), log backtrace, show message |
-| Unexpected exception | Abort operation, log backtrace (first 10 lines), show error message |
+| Exception during a step | As a failed step, with the error message; between two steps (no open operation), the steps already done are undone by `Sketchup.undo`; backtrace (first 10 lines) in the console |
+| Unexpected exception outside a step | Abort the open operation, log backtrace, show error message |
 
 ## 9. Version History
 
@@ -331,3 +334,4 @@ All user-facing messages use `UI.messagebox` with `MB_OK`. Error messages includ
 | 2.2.1 | 2026-04-12 | Backward compatibility with SketchUp Pro 2017+. Replaced Ruby 2.3 safe navigation (`&.`) with classic nil checks for Ruby 2.2 compatibility. Added `respond_to?(:weld)` guard in `CircleRestore` — Phase 3 silently skipped on SketchUp < 2020.1. Set Repair Options menu/toolbar hidden on versions < 2020.1. |
 | 2.3.0 | 2026-10-11 | Phase 3 rebuilt on the Re-Cercle v2.0.0 method, copied into the plugin (`solid_batch/circle_restore/`, no dependency): broken circles and arcs become **native** `ArcCurve` (center inference) — planar rebuild, Push/Pull rebuild of cylinders and truncated cones (holes, pins) — with weld only as a fallback (reason logged). Detection by chains of equal segments (tolerance `max(0.001", 0.5 % r)`), circles ≥ 6 segments, default `min_arc_segments` 8 → 6. Post-rebuild checks; a Phase 3 failure aborts Phase 3 only (boolean result kept). `restore_in_solid` returns `{native:, welded:, unwelded:, reasons:}`; summary in console and status bar. |
 | 2.4.0 | 2026-10-26 | Native circles and arcs before SketchUp 2020.1 too (the `weld` guard now only blocks the weld fallback); Set Repair Options in every version. `repair_holes` made faster with grids (same result; plate with 20 holes 9.6 → 2.2 s). Without SketchUp Pro, Combine All shows "PRO Only" (one edition check, `Sketchup.is_pro?`); `respond_to?(mode)` check removed. Added `solid_operations.rb` (Ruby boolean engine of Solid for Maker 1.0.1, Eneroth Solid Tools, MIT). Automatic test battery `tools/tests` (SketchUp 2021 and Make 2017). |
+| 2.4.1 | 2026-10-26 | Failed step of Combine All: clear message (step n/N, operation, solid with name and position, reason), solid of the step selected, model unchanged (checked: SketchUp undoes the whole chain, T14; failures forced at the start, in the middle, at the end and Ruby error, T13). Error between two steps: steps already done undone. |

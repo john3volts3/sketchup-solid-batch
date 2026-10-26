@@ -6,7 +6,7 @@ Chemins relatifs à la racine de ce dépôt ; les dépôts voisins sont dans le 
 
 ## État au 2026-10-26
 
-- **Version 2.4.0 livrée le 2026-10-26** (lots A à E ci-dessous). Ce qui suit décrit l'état de départ de la session.
+- **Version 2.4.0 livrée le 2026-10-26** (lots A à E ci-dessous), puis **2.4.1** le même jour (échec d'une étape de Combine All : message clair, solide sélectionné, modèle inchangé). Ce qui suit décrit l'état de départ de la session.
 - **Version 2.3.0** (commit `13748c4`, 2026-10-11) : Combine All (Union / Shell) avec les booléens natifs, Set Subtract Color, Set Repair Options, reconstruction des cercles et arcs (méthode Re-Cercle v2.0.0, `solid_batch/circle_restore/`). Installée dans les plugins de SketchUp 2021 **et** de SketchUp Make 2017.
 - Dépôt GitHub **public**, aucun tag ni release GitHub (diffusion prévue : SketchUcation, notes privées dans `docs/SKETCHUCATION.md`, exclu de git).
 - Pas de `PRD.md` (exigé par les règles générales : à créer à la première livraison, à partir du FSD, du README et du JOURNAL), pas de batterie de tests.
@@ -20,7 +20,7 @@ Chemins relatifs à la racine de ce dépôt ; les dépôts voisins sont dans le 
   2. `circle_restore/volume.rb` : `repair_holes` parcourt toutes les arêtes pour chaque trou (≈ 1 s par cylindre reconstruit dans une plaque à 30 trous). Solid Procedural 1.1.1 (commit `7285e84`) : grilles de cases de la taille de la tolérance, résultat identique (T15).
 - `main.rb` : *Set Repair Options* n'est proposé qu'à partir de 2020.1 (`Sketchup.version.to_f >= 20.1`, menu et barre d'outils).
 - `main.rb`, `do_combine_all_pro` : le contrôle `solids[0].respond_to?(mode)` ne détecte pas SketchUp Make (`Group#union` y est défini) : sous Make, le message « This function requires SketchUp Pro » n'apparaît pas. **Confirmé par la batterie (T10, Make 2017)** : `union` / `subtract` lèvent une exception, d'où le message « Combine All error: 'union' is a Pro only feature. » ; aucun solide perdu.
-- `main.rb`, `do_combine_all_pro` : si une étape booléenne échoue au milieu, `abort_operation` n'annule que cette étape ; les étapes déjà validées restent dans le modèle (un Ctrl+Z les annule), alors que le FSD dit « abandonner et annuler ». À décider (hors lots A à E).
+- ~~`main.rb`, `do_combine_all_pro` : si une étape booléenne échoue au milieu, `abort_operation` n'annule que cette étape.~~ **Constat faux** (tiré de la lecture du code) : la batterie (T14, 2021 et Make 2017) montre que SketchUp, en annulant une opération enchaînée (transparente), annule toute la chaîne ; le modèle revenait déjà comme avant. La 2.4.1 rend le message clair (étape, solide, raison ; solide sélectionné) et couvre l'erreur survenue entre deux étapes (T13, L05).
 - Batterie (T04, 2021) : après Subtract, les 48 faces des parois des trous portent la couleur de soustraction (comportement natif, inchangé depuis la 2.0).
 
 ## Décisions prises le 2026-10-26
@@ -63,7 +63,7 @@ Les notes propres à ce PC sont dans `TACHES.local.md` (exclu de git) : à lire 
 
 ## Suite possible (non planifiée)
 
-- Échec d'une étape au milieu d'un lot : tout annuler automatiquement ? (voir les constats ci-dessus et le PRD § 9).
+- ~~Échec d'une étape au milieu d'un lot : tout annuler automatiquement ?~~ Fait en 2.4.1 (le modèle revenait déjà comme avant ; message clair, solide sélectionné).
 - Règles de l'Extension Warehouse sur le code tiers MIT (non vérifiées).
 
 ## Pièges connus (venus de Solid Procedural et de Solid for Maker)

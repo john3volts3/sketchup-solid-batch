@@ -166,11 +166,14 @@ Votre selection contient moins de 2 solides valides. Verifiez que :
 ### "No base objects found"
 Tous les objets selectionnes ont la couleur de soustraction. Au moins un objet doit avoir une couleur differente pour servir de base.
 
-### L'operation echoue a une etape specifique
-Une des operations booleennes a echoue. Causes habituelles :
-- Deux solides ne s'intersectent pas (rien a fusionner/soustraire)
-- La geometrie est trop complexe ou a des faces coplanaires
-- Essayez de reordonner ou simplifier les solides problematiques
+### « Combine All failed at step 3 of 5: Subtract 2 of 4, group "…" at (…) »
+Une des opérations booléennes n'a pas pu donner un solide valide. **Rien n'a été modifié** : les étapes déjà faites sont annulées elles aussi, et le modèle est exactement comme avant Combine All. Le message nomme l'étape (son numéro, l'opération) et le solide de cette étape (son nom et sa position), et ce solide est **sélectionné**.
+
+À vérifier sur le solide sélectionné :
+- C'est un solide valide (Infos sur l'entité affiche « Groupe solide » ou « Composant solide »)
+- Ses faces ne sont pas au ras des faces des autres solides (déplacez-le un peu, ou allongez-le pour qu'il traverse)
+- La géométrie n'est pas trop fine ni trop complexe
+- Relancez ensuite Combine All
 
 ### "Circle and arc restoration failed"
 Un cercle n'a pas pu être reconstruit. Seule la restauration est annulée : le résultat du Combine All est conservé et ses cercles restent dans leur état. La console Ruby donne le détail.

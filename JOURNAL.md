@@ -16,6 +16,15 @@
 - **CLAUDE.md** (créé) — Instructions de projet : lire `TACHES.md` au démarrage, skills à charger, règles (nom identique partout, dépôt public sans chemin local, plugin autonome, booléens natifs inchangés sous Pro, Ruby 2.2 si Make est retenu, fiabilité avant vitesse, batterie de tests).
 - **TACHES.md** (créé) — État de la 2.3.0 ; constats vérifiés par `diff` avec Solid Procedural (garde `weld` qui bloque toute reconstruction des cercles avant 2020.1, `repair_holes` non accéléré, *Set Repair Options* caché avant 2020.1, Make non détecté par `respond_to?`) ; décisions à prendre (moteur de Solid for Maker 1.0.1 sous Make ou non, version, installation, outils de test, release) ; plan en lots A (batterie de tests) à E (documentation et livraison) ; pièges connus.
 
+### Livraison 2.4.1 — échec d'une étape de Combine All
+
+- **Demande utilisateur** : en cas d'échec d'une étape, revenir au modèle d'avant (option B) avec un message bien clair de l'étape qui n'a pas fonctionné.
+- **Constat corrigé** : le premier essai (`abort_operation` puis `Sketchup.undo` des étapes déjà faites) annulait aussi l'action de l'utilisateur d'avant Combine All (T13 en échec). Diagnostic T14 (2021 et Make 2017) : annuler une opération enchaînée (transparente) annule toute la chaîne. La 2.4.0 revenait donc déjà au modèle d'avant ; le constat écrit à la livraison 2.4.0 était faux (corrigé dans `TACHES.md` et le PRD).
+- **solid_batch/main.rb** — `step_info`, `solid_label` (nom, position au centre de la boîte englobante, coordonnées séparées par des points-virgules), `combine_failed` : opération ouverte annulée (toute la chaîne avec elle) ; erreur entre deux étapes (aucune opération ouverte) : étapes déjà faites annulées par `Sketchup.undo` ; message « Combine All failed at step n of N: <opération>, <solide>. <raison> » + « Nothing was changed » ; solide de l'étape sélectionné (retrouvé par `persistent_id` si besoin). Ligne de garde inchangée.
+- **tools/tests/run_tests.rb** — T13 (4 cas : échec forcé à l'étape 1, au milieu, à la dernière, erreur Ruby ; modèle comme avant, action précédente gardée, message, solide sélectionné) ; T14 (comportement de SketchUp : annulation d'une opération enchaînée). Test local L05 (moteur Ruby).
+- **Validation** — SketchUp 2021 : 46 réussis, 0 échec. Make 2017 : 23 réussis, 0 échec, 23 sautés (booléens natifs).
+- **Documentation** — Version 2.4.1 (`solid_batch.rb`, `version.rb`) ; FSD FR/EN (EF-01 gestion d'erreur, modules, ENF-07, erreurs, historique) ; manuels FR/EN (dépannage du message d'échec) ; README ; PRD (NF-10, critères T13/T14, décision, historique) ; `TACHES.md`.
+
 ### Lot E — documentation et livraison 2.4.0
 
 - **solid_batch.rb, solid_batch/version.rb** — Version 2.4.0.
