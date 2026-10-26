@@ -16,6 +16,11 @@
 - **CLAUDE.md** (créé) — Instructions de projet : lire `TACHES.md` au démarrage, skills à charger, règles (nom identique partout, dépôt public sans chemin local, plugin autonome, booléens natifs inchangés sous Pro, Ruby 2.2 si Make est retenu, fiabilité avant vitesse, batterie de tests).
 - **TACHES.md** (créé) — État de la 2.3.0 ; constats vérifiés par `diff` avec Solid Procedural (garde `weld` qui bloque toute reconstruction des cercles avant 2020.1, `repair_holes` non accéléré, *Set Repair Options* caché avant 2020.1, Make non détecté par `respond_to?`) ; décisions à prendre (moteur de Solid for Maker 1.0.1 sous Make ou non, version, installation, outils de test, release) ; plan en lots A (batterie de tests) à E (documentation et livraison) ; pièges connus.
 
+### Mise à jour SketchUcation 2.5.0 (aucun code)
+
+- **SketchUcation PluginStore** (Dev Tools, par le navigateur, à la demande de l'utilisateur, connecté lui-même) — Basic Info : version `2.5.0` (au lieu de `_2.2.1`), nouvelle description courte (Pro et Make 2017) ; Overview : présentation complète (description, fonctions, compatibilité Pro / Make, configuration, installation, crédits Eneroth, vidéo) ; Documentation et Release Notes à jour (2.3.0 à 2.5.0) ; `Solid_Batch.rbz` remplacé par la 2.5.0. Start, compatibilité, liens et Author Info inchangés. Enregistrement vérifié en rouvrant l'éditeur. Le retrait de l'ancien `.rbz` a dépublié le plugin ; republication demandée, en attente de validation par les administrateurs de SketchUcation.
+- **TACHES.md** — Suite : état de la mise à jour SketchUcation (à vérifier : retour dans le PluginStore).
+
 ### Livraison 2.5.0 — SketchUp Make débloqué, licence d'Eneroth en ordre
 
 - **Demande utilisateur** : pas de diffusion par l'Extension Warehouse ; Solid Batch, Solid Procedural et Solid for Maker débloqués pour Make, avec une seule ligne à commenter ou décommenter pour bloquer Make ; mécanisme documenté publiquement ; version 2.5.0 ; changements de Solid Procedural et Solid for Maker dans leurs propres sessions.

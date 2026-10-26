@@ -65,6 +65,7 @@ Les notes propres à ce PC sont dans `TACHES.local.md` (exclu de git) : à lire 
 
 - ~~Échec d'une étape au milieu d'un lot : tout annuler automatiquement ?~~ Fait en 2.4.1 (le modèle revenait déjà comme avant ; message clair, solide sélectionné).
 - ~~Règles de l'Extension Warehouse sur le code tiers MIT~~ : Extension Warehouse non visée (décision 2.5.0, PRD § 9).
+- **SketchUcation** : page mise à jour en 2.5.0 le 2026-10-26 (version, description courte, Overview, Documentation, Release Notes, `.rbz`). Le retrait de l'ancien `.rbz` a dépublié le plugin ; republication demandée, **en attente de validation par les administrateurs**. Vérifier qu'il réapparaît dans le PluginStore.
 - Solid Procedural et Solid for Maker : même schéma (Make débloqué, une seule ligne, un seul test Pro) et mêmes points de licence, à faire dans leurs sessions (notes déposées dans leurs listes de tâches le 2026-10-26).
 
 ## Pièges connus (venus de Solid Procedural et de Solid for Maker)
