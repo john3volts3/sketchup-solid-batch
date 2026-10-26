@@ -264,7 +264,7 @@
 - **dro_solid_ops/main.rb** — Menu Extensions > Solid Ops (Union, Subtract, Split), toolbar avec 3 commandes, validation de la sélection (solides manifold)
 - **dro_solid_ops/boolean_ops.rb** — Première implémentation du moteur booléen (merged group + raytest classification). Nombreuses itérations pour résoudre les problèmes de face splitting et classification.
 - **dro_solid_ops/icons/** — Icônes PNG 24x24 pour union, subtract, split
-- **C:/Users/danie/.claude/commands/sketchup-plugin.md** — Ajout directive de cohérence de nommage
+- **~/.claude/commands/sketchup-plugin.md** — Ajout directive de cohérence de nommage
 
 ### Réécriture complète du moteur booléen
 
