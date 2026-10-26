@@ -3,7 +3,7 @@ itself ported from Eneroth Solid Tools.
 
 MIT License
 
-Copyright (c) 2017-2018 Julia Christina Eneroth (Eneroth Solid Tools)
+Copyright (c) 2017 Julia Christina Eneroth (Eneroth Solid Tools)
 Copyright (c) 2026 DRO (Solid for Maker)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

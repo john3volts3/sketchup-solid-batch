@@ -2,13 +2,13 @@
 
 ## Presentation
 
-Solid Batch est un plugin SketchUp Pro qui effectue des operations booleennes par lot sur plusieurs solides en un seul clic. Il utilise le moteur booleen natif de SketchUp Pro pour des resultats fiables.
+Solid Batch est un plugin SketchUp qui effectue des operations booleennes par lot sur plusieurs solides en un seul clic. Sous SketchUp Pro, il utilise le moteur booléen natif ; sous SketchUp Make, qui n'en a pas, un moteur Ruby intégré.
 
 Le plugin fournit quatre commandes accessibles via le menu **Extensions > Solid Batch** et la barre d'outils **Solid Batch**.
 
 ## Prerequis
 
-- **SketchUp Pro** 2017 ou plus recent
+- **SketchUp Pro** 2017 ou plus récent, ou **SketchUp Make** 2017 (SketchUp Make est concédé par Trimble pour un usage non commercial uniquement)
 - Tous les objets doivent etre des groupes ou composants **solides** (geometrie manifold — chaque arete borde exactement 2 faces)
 
 ### Compatibilité par version
@@ -17,7 +17,7 @@ Le plugin fournit quatre commandes accessibles via le menu **Extensions > Solid 
 |---|---|
 | Pro 2017 ou plus récent | Toutes les fonctions : Combine All (Union, Shell), Set Subtract Color, Set Repair Options, restauration automatique des cercles et arcs (cercles natifs) |
 | Pro 2020.1 ou plus récent | En plus, la soudure de secours : un cercle non reconstructible en natif est soudé en une courbe (avant 2020.1, il reste en segments) |
-| Make, Free | Combine All affiche « PRO Only » (les booléens natifs sont une fonction de SketchUp Pro) |
+| Make 2017 | Toutes les fonctions, avec le moteur Ruby intégré : plus lent sur les pièces chargées, et Shell supprime un solide enfermé dans un autre (l'Outer Shell natif de Pro le garde) |
 
 ## Commandes
 
@@ -154,8 +154,8 @@ Un bilan s'affiche dans la barre de statut et, avec la raison de chaque soudure,
 
 ## Resolution de problemes
 
-### "PRO Only"
-Vous utilisez SketchUp Make ou SketchUp Free. Combine All utilise les methodes booleennes natives, qui ne sont disponibles que dans SketchUp Pro. Rien n'est modifie dans le modele.
+### « PRO Only vs. main.rb:... »
+Cette copie du plugin a été réservée à SketchUp Pro : la ligne citée par le message, dans `solid_batch/main.rb`, a été décommentée. Rien n'est modifié dans le modèle. Pour utiliser Combine All sous SketchUp Make, remettez cette ligne en commentaire (un `#` au début) et redémarrez SketchUp.
 
 ### "Select at least 2 solid group(s) or component(s)"
 Votre selection contient moins de 2 solides valides. Verifiez que :

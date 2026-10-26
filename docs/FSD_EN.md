@@ -1,6 +1,6 @@
 # Solid Batch — Functional Specification Document
 
-**Version:** 2.4.1
+**Version:** 2.5.0
 **Date:** 2026-10-26
 **Author:** DRO
 
@@ -8,7 +8,7 @@
 
 ## 1. Purpose
 
-Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on multiple solids in a single action. It targets users who need to combine and subtract many solid objects efficiently (e.g., architectural modeling, 3D printing preparation, mechanical assemblies).
+Solid Batch is a SketchUp plugin (Pro and Make) that enables batch boolean operations on multiple solids in a single action: native booleans in SketchUp Pro, built-in Ruby boolean engine in SketchUp Make. It targets users who need to combine and subtract many solid objects efficiently (e.g., architectural modeling, 3D printing preparation, mechanical assemblies).
 
 ## 2. Scope
 
@@ -21,11 +21,12 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 - Automatic restoration of broken circles AND arcs on the result (native boolean operations destroy `ArcCurve` associations; the plugin rebuilds them as **native circles/arcs** — `ArcCurve` with center inference — using the Re-Cercle method, and welds them into single-click selectable curves when a native rebuild is not possible)
 - Configurable threshold to skip restoration on very large objects (performance)
 - Configurable minimum segment count for arc detection (tradeoff between catching short arcs and avoiding false positives)
+- In SketchUp Make: the same operations with the Ruby boolean engine `solid_operations.rb` (Solid for Maker 1.0.1, after Eneroth Solid Tools, MIT license); one line of code sets Combine All to SketchUp Pro only (FR-07)
 
 ### Out of scope
 - Custom boolean engine in SketchUp Pro (removed in v2.0 — in Pro, the plugin relies entirely on native methods)
 - Individual union/subtract/split operations (available natively in SketchUp Pro)
-- SketchUp Make / Free compatibility (Combine All shows "PRO Only", see FR-07)
+- SketchUp Free (web version): does not run extensions
 
 ## 3. Target Users
 
@@ -39,7 +40,7 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 
 | Requirement | Value |
 |-------------|-------|
-| SketchUp version | Pro 2017 or later (without Pro: "PRO Only" message, FR-07) |
+| SketchUp version | Pro 2017 or later (native booleans); Make 2017 (Ruby engine, FR-07) |
 | Operating system | Windows / macOS (any OS supported by SketchUp) |
 | Ruby API methods | `Group#union`, `Group#outer_shell`, `Group#subtract`, `Group#manifold?`, `Sketchup.is_pro?` |
 | Circle/arc restoration | Native circles and arcs in every version (2017+), Set Repair Options everywhere. Only the weld fallback requires SketchUp 2020.1+ (`Entities#weld`): before, a chain that cannot be rebuilt natively stays as segments. |
@@ -112,13 +113,15 @@ Solid Batch is a SketchUp Pro plugin that enables batch boolean operations on mu
 | **Process** | Filter entities to Groups and ComponentInstances that pass `manifold?` check |
 | **Output** | Array of valid solids, or error message if fewer than required minimum |
 
-#### FR-07: Without SketchUp Pro
+#### FR-07: Without SketchUp Pro (SketchUp Make)
 
 | Field | Description |
 |-------|-------------|
-| **Input** | Combine All (Union or Shell) in SketchUp Make or Free |
-| **Process** | First check of Combine All, before the selection: SketchUp edition (`Sketchup.is_pro?`, the only edition check of the plugin) |
-| **Output** | "PRO Only" message; nothing is changed in the model |
+| **Input** | Combine All (Union or Shell) in SketchUp Make |
+| **Process** | First check of Combine All: SketchUp edition (`ruby = !Sketchup.is_pro?`, the only edition check of the whole plugin). Without Pro, phases 1 and 2 use the Ruby engine (`ruby_boolean`): `SolidOperations.union(base, other)`, `.outer_shell(base, other)`, `.subtract(base, tool)` — base first, the reverse of the native `tool.subtract(base)`; the base is modified in place, the other solid erased; a component shared with other instances is made unique first. Phase 3 (circles) is the same. |
+| **Output** | The same result as in Pro (same volumes, native circles, one undo step) |
+| **Pro only** | The line `# return pro_only(__LINE__) if ruby`, just after the edition check in `do_combine_all_pro` (`solid_batch/main.rb`), is commented out by default. Uncommented, Combine All is for SketchUp Pro only: without Pro, "PRO Only vs. main.rb:<line>" message (the line to comment out again), nothing is changed |
+| **Limitations** | Slower than the native booleans on heavy parts; the Shell of the engine erases a solid enclosed in another one (the native Outer Shell keeps it) |
 
 ### 4.3 Non-Functional Requirements
 
@@ -194,7 +197,7 @@ SolidBatch                  # Top-level namespace
   do_combine_all_pro(mode)    # Batch union/shell + subtract + circle & arc restore
   do_set_subtract_color()     # Register subtract color
   do_set_repair_options()     # Configure auto-repair + threshold + min arc segments
-  pro_only(line)              # "PRO Only" message (FR-07)
+  pro_only(line)              # "PRO Only vs. main.rb:<line>" message (Pro only option, FR-07)
   ruby_boolean(op, base, other) # Boolean of the Ruby engine (solid_operations.rb)
   step_info / solid_label     # Current step and solid (name, position), for the failure message
   combine_failed(...)         # Failed step: undo everything, message, solid selected
@@ -219,7 +222,7 @@ SolidBatch::CircleRestore   # Circle and arc restoration module
 User clicks "Combine All (Union)" or "(Shell)"
   |
   v
-Check the edition (Sketchup.is_pro?) — without Pro: "PRO Only" message, end
+Check the edition (Sketchup.is_pro?) — without Pro: Ruby engine (Pro only option: "PRO Only", end)
   |
   v
 get_solids(2) — validate selection
@@ -316,7 +319,7 @@ All user-facing messages use `UI.messagebox` with `MB_OK`. Error messages includ
 | Scenario | Behavior |
 |----------|----------|
 | Fewer than 2 solids selected | Show count message, abort |
-| Without SketchUp Pro (Make, Free) | Show "PRO Only" message, abort (nothing changed) |
+| Without SketchUp Pro, Pro only option (line uncommented) | Show "PRO Only vs. main.rb:<line>", abort (nothing changed) |
 | All solids have subtract color | Show "no base objects" message, abort |
 | Boolean step fails (nil/invalid result) | Abort the step and the steps already done (model as before), message: step n/N, operation, solid (name, position), reason; solid selected |
 | Circle/arc restoration fails (Phase 3) | Abort Phase 3 only (boolean result kept, circles left as they were), log backtrace, show message |
@@ -335,3 +338,4 @@ All user-facing messages use `UI.messagebox` with `MB_OK`. Error messages includ
 | 2.3.0 | 2026-10-11 | Phase 3 rebuilt on the Re-Cercle v2.0.0 method, copied into the plugin (`solid_batch/circle_restore/`, no dependency): broken circles and arcs become **native** `ArcCurve` (center inference) — planar rebuild, Push/Pull rebuild of cylinders and truncated cones (holes, pins) — with weld only as a fallback (reason logged). Detection by chains of equal segments (tolerance `max(0.001", 0.5 % r)`), circles ≥ 6 segments, default `min_arc_segments` 8 → 6. Post-rebuild checks; a Phase 3 failure aborts Phase 3 only (boolean result kept). `restore_in_solid` returns `{native:, welded:, unwelded:, reasons:}`; summary in console and status bar. |
 | 2.4.0 | 2026-10-26 | Native circles and arcs before SketchUp 2020.1 too (the `weld` guard now only blocks the weld fallback); Set Repair Options in every version. `repair_holes` made faster with grids (same result; plate with 20 holes 9.6 → 2.2 s). Without SketchUp Pro, Combine All shows "PRO Only" (one edition check, `Sketchup.is_pro?`); `respond_to?(mode)` check removed. Added `solid_operations.rb` (Ruby boolean engine of Solid for Maker 1.0.1, Eneroth Solid Tools, MIT). Automatic test battery `tools/tests` (SketchUp 2021 and Make 2017). |
 | 2.4.1 | 2026-10-26 | Failed step of Combine All: clear message (step n/N, operation, solid with name and position, reason), solid of the step selected, model unchanged (checked: SketchUp undoes the whole chain, T14; failures forced at the start, in the middle, at the end and Ruby error, T13). Error between two steps: steps already done undone. |
+| 2.5.0 | 2026-10-26 | SketchUp Make: Combine All with the Ruby engine by default; one (commented) line sets Combine All to Pro only ("PRO Only vs. main.rb:<line>"). Eneroth's MIT notice reproduced exactly ("Copyright (c) 2017 Julia Christina Eneroth"). Test battery: every Combine All test also with the Ruby engine (Make 2017, and Make simulated in Pro). |

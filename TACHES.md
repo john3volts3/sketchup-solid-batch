@@ -6,7 +6,7 @@ Chemins relatifs à la racine de ce dépôt ; les dépôts voisins sont dans le 
 
 ## État au 2026-10-26
 
-- **Version 2.4.0 livrée le 2026-10-26** (lots A à E ci-dessous), puis **2.4.1** le même jour (échec d'une étape de Combine All : message clair, solide sélectionné, modèle inchangé). Ce qui suit décrit l'état de départ de la session.
+- **Version 2.4.0 livrée le 2026-10-26** (lots A à E ci-dessous), puis **2.4.1** le même jour (échec d'une étape de Combine All : message clair, solide sélectionné, modèle inchangé), puis **2.5.0** (Make débloqué par défaut, une seule ligne pour réserver à Pro, notice MIT d'Eneroth exacte ; tests du moteur rendus publics, `tools/tests/local/` supprimé). Ce qui suit décrit l'état de départ de la session.
 - **Version 2.3.0** (commit `13748c4`, 2026-10-11) : Combine All (Union / Shell) avec les booléens natifs, Set Subtract Color, Set Repair Options, reconstruction des cercles et arcs (méthode Re-Cercle v2.0.0, `solid_batch/circle_restore/`). Installée dans les plugins de SketchUp 2021 **et** de SketchUp Make 2017.
 - Dépôt GitHub **public**, aucun tag ni release GitHub (diffusion prévue : SketchUcation, notes privées dans `docs/SKETCHUCATION.md`, exclu de git).
 - Pas de `PRD.md` (exigé par les règles générales : à créer à la première livraison, à partir du FSD, du README et du JOURNAL), pas de batterie de tests.
@@ -27,12 +27,12 @@ Chemins relatifs à la racine de ce dépôt ; les dépôts voisins sont dans le 
 
 Les notes propres à ce PC sont dans `TACHES.local.md` (exclu de git) : à lire aussi au démarrage.
 
-1. **SketchUp Make** : le moteur Ruby de Solid for Maker 1.0.1 est copié dans `solid_batch/solid_operations.rb` (licence MIT d'Eneroth conservée) ; sous Make (`Sketchup.is_pro?` faux), Combine All affiche « PRO Only » ; sous Pro, booléens natifs inchangés.
+1. **SketchUp Make** : le moteur Ruby de Solid for Maker 1.0.1 est copié dans `solid_batch/solid_operations.rb` (licence MIT d'Eneroth conservée) ; sous Make (`Sketchup.is_pro?` faux), Combine All affiche « PRO Only » ; sous Pro, booléens natifs inchangés. **Révisée le 2026-10-26 (2.5.0)** : pas d'Extension Warehouse ; Make débloqué par défaut (moteur Ruby) dans Solid Batch, Solid Procedural et Solid for Maker ; une seule ligne, commentée par défaut, réserve Combine All à Pro (« PRO Only vs. main.rb:<ligne> ») ; un seul contrôle de l'édition ; mécanisme documenté publiquement.
 2. **Version** : 2.4.0.
 3. **Installation pendant le développement** : plugins de SketchUp 2021 et de Make 2017.
 4. **Outils de test** dans le dépôt public, sans chemin local (SketchUp trouvé par le registre, comme `../sketchup-solid-for-maker/tools/regression/run_kit.ps1`) ; les tests du moteur Ruby restent dans un fichier local exclu de git.
 5. **Release GitHub** v2.4.0 avec le `.rbz` à la livraison.
-6. **Documentation publique** (README, FSD, manuels) : SketchUp Pro requis ; « PRO Only » sous Make ; `solid_operations.rb` listé avec le crédit Eneroth (MIT), sans plus de détail.
+6. **Documentation publique** (README, FSD, manuels) : SketchUp Pro requis ; « PRO Only » sous Make ; `solid_operations.rb` listé avec le crédit Eneroth (MIT), sans plus de détail. **Révisée le 2026-10-26 (2.5.0)** : SketchUp Pro et Make ; la ligne « Pro seulement » est décrite (README, FSD EF-07) ; notice MIT d'Eneroth exacte, « not an official Eneroth extension ».
 
 ## Plan
 
@@ -64,7 +64,8 @@ Les notes propres à ce PC sont dans `TACHES.local.md` (exclu de git) : à lire 
 ## Suite possible (non planifiée)
 
 - ~~Échec d'une étape au milieu d'un lot : tout annuler automatiquement ?~~ Fait en 2.4.1 (le modèle revenait déjà comme avant ; message clair, solide sélectionné).
-- Règles de l'Extension Warehouse sur le code tiers MIT (non vérifiées).
+- ~~Règles de l'Extension Warehouse sur le code tiers MIT~~ : Extension Warehouse non visée (décision 2.5.0, PRD § 9).
+- Solid Procedural et Solid for Maker : même schéma (Make débloqué, une seule ligne, un seul test Pro) et mêmes points de licence, à faire dans leurs sessions (notes déposées dans leurs listes de tâches le 2026-10-26).
 
 ## Pièges connus (venus de Solid Procedural et de Solid for Maker)
 
@@ -74,3 +75,4 @@ Les notes propres à ce PC sont dans `TACHES.local.md` (exclu de git) : à lire 
 - Booléens natifs avec un outil fait de plusieurs solides : SketchUp laisse des définitions inutilisées `TempInstance#n`.
 - Limites du moteur des cercles (communes à tous ces plugins) : cercle partagé par deux surfaces courbes (fraisurage dont le cône rejoint le trou : « cylinder end with a line attached ») et trou à cheval sur une ligne entre deux faces coplanaires, non reconstruits en natif.
 - Ne jamais fermer une session SketchUp ouverte par l'utilisateur ; les lanceurs refusent de démarrer si SketchUp tourne.
+- `PrivatePreferences.json` de SketchUp est en UTF-8 sans BOM : ne jamais le lire avec `Get-Content -Raw` sous Windows PowerShell 5.1 (lu en ANSI, réécrit en UTF-8 : il a grossi jusqu'à 1,96 Go le 2026-10-26 et SketchUp 2021 ne démarrait plus). `[IO.File]::ReadAllText` / `WriteAllText` avec `UTF8Encoding($false)`, et ne pas toucher un fichier de plus de 20 Mo (corrigé dans `tools/tests/run_tests.ps1`).

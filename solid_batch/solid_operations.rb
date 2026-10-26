@@ -6,7 +6,7 @@
 #
 #  Solid for Maker ported it from Eneroth Solid Tools 3.0.0
 #  (src/ene_solids/solid_operations.rb).
-#  Copyright (c) 2017-2018 Julia Christina Eneroth, (c) 2026 DRO, MIT License
+#  Copyright (c) 2017 Julia Christina Eneroth, (c) 2026 DRO, MIT License
 #  (see LICENSE-solid-operations.txt).
 #
 #  Changes from Eneroth Solid Tools (made in Solid for Maker):

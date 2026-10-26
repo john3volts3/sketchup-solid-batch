@@ -371,20 +371,83 @@ module SolidBatch
       raise
     end
 
-    # Native boolean of a test step: the solid that holds the result, or nil.
-    def self.boolean(op, acc, tool)
+    # Engines of Combine All tested in this SketchUp: native (false) in
+    # SketchUp Pro, Ruby engine (true) everywhere (SketchUp Make simulated in
+    # Pro).
+    def self.engines
+      pro? ? [false, true] : [true]
+    end
+
+    def self.engine_label(ruby)
+      ruby ? 'Ruby engine' : 'native'
+    end
+
+    # In SketchUp Pro, the Ruby engine is used with SketchUp Make simulated
+    # (restored after each test step by guarded).
+    def self.use_engine(ruby)
+      force_pro(false) if ruby && Sketchup.is_pro?
+    end
+
+    # Boolean of a test step, with the native booleans or the Ruby engine of
+    # the plugin: the solid that holds the result, or nil.
+    def self.boolean(ruby, op, acc, tool)
+      return SolidBatch.ruby_boolean(op == 'union' ? :union : :subtract, acc, tool) if ruby
       op == 'union' ? acc.union(tool) : tool.subtract(acc)
     end
 
     # Booleans of a T12 case: [result, nil], or [last result, failed step].
-    def self.run_steps(model, base, steps)
+    def self.run_steps(model, base, steps, ruby)
       acc = base
       steps.each_with_index do |(op, tool), k|
         model.selection.clear
-        acc = boolean(op, acc, tool)
+        acc = boolean(ruby, op, acc, tool)
         return [acc, "#{op} #{k + 1} of #{steps.length}"] unless acc && acc.valid?
       end
       [acc, nil]
+    end
+
+    # The edition check of do_combine_all_pro and the line that sets Combine
+    # All to SketchUp Pro only (commented out by default).
+    PRO_TEST = 'ruby = !Sketchup.is_pro?'.freeze
+    GUARD = 'return pro_only(__LINE__) if ruby'.freeze
+
+    def self.main_path
+      File.join(plugin_dir, 'main.rb')
+    end
+
+    def self.main_lines
+      File.open(main_path, 'r:UTF-8', &:readlines)
+    end
+
+    # Index of the Pro only line in main.rb (commented or not), or nil.
+    def self.guard_index(lines)
+      lines.index { |l| l.strip.sub(/\A#\s*/, '') == GUARD }
+    end
+
+    # main.rb with the Pro only line uncommented, as a user would do; the
+    # require_relative lines are blanked (files already loaded, line numbers
+    # kept). restore_main afterwards.
+    def self.load_main_pro_only
+      lines = main_lines
+      k = guard_index(lines)
+      lines[k] = lines[k].sub(/\A(\s*)#\s*/, '\1')
+      src = lines.map { |l| l =~ /\A\s*require_relative/ ? "\n" : l }.join
+      verbose = $VERBOSE
+      $VERBOSE = nil
+      eval(src, TOPLEVEL_BINDING, main_path, 1)
+      k + 1
+    ensure
+      $VERBOSE = verbose
+      force_default_options
+    end
+
+    def self.restore_main
+      verbose = $VERBOSE
+      $VERBOSE = nil
+      load main_path
+    ensure
+      $VERBOSE = verbose
+      force_default_options
     end
 
     def self.box(entities, x, y, z, w, d, h, material = nil)
@@ -438,12 +501,27 @@ module SolidBatch
       groups_in(model, y).map { |g| g.volume.round(3) }.sort
     end
 
-    # The call number +nth+ of the native +op+ (:union or :subtract) on the
-    # solids does the boolean, then fails (:nil: returns nil; :raise: raises).
-    # Returns { pid: persistent_id of the solid of the failed step }.
-    def self.force_failure(solids, op, nth, how)
+    # The call number +nth+ of +op+ (:union or :subtract) does the boolean,
+    # then fails (:nil: returns nil; :raise: raises): on the solids (native
+    # booleans) or in SolidOperations (Ruby engine). Returns { pid:
+    # persistent_id of the solid of the failed step }.
+    def self.force_failure(ruby, solids, op, nth, how)
       failed = {}
       calls = [0]
+      if ruby
+        orig = SolidOperations.method(op)
+        @failure_orig = [op, orig]
+        SolidOperations.define_singleton_method(op) do |target, modifier|
+          pid = modifier.respond_to?(:persistent_id) ? modifier.persistent_id : nil
+          res = orig.call(target, modifier)
+          calls[0] += 1
+          next res unless calls[0] == nth
+          failed[:pid] = pid
+          raise 'test failure' if how == :raise
+          nil
+        end
+        return failed
+      end
       solids.each do |s|
         s.define_singleton_method(op) do |other|
           # Native union: the receiver is the base, the solid of the step is
@@ -462,7 +540,12 @@ module SolidBatch
       failed
     end
 
-    def self.remove_failure(solids, op)
+    def self.remove_failure(ruby, solids, op)
+      if ruby
+        SolidOperations.define_singleton_method(op, @failure_orig[1]) if @failure_orig
+        @failure_orig = nil
+        return
+      end
       solids.each do |s|
         s.singleton_class.send(:remove_method, op) if s.singleton_methods.include?(op)
       end
@@ -650,8 +733,6 @@ module SolidBatch
     # Tests
     # -------------------------------------------------------------------
 
-    NO_BOOLEANS = 'SketchUp Make: no native booleans (see T10)'.freeze
-
     def self.define_tests
       tests = self
 
@@ -678,9 +759,15 @@ module SolidBatch
                 different.join(', '))
       end
 
-      test 'T02 Combine All (Union): three boxes' do |c, model|
-        next c.skip(NO_BOOLEANS) unless tests.pro?
-        y = 0
+      # Combine All with each engine of this SketchUp (see engines): in the
+      # band y + 3000 for the Ruby engine.
+      tests.engines.each do |ruby|
+      engine = tests.engine_label(ruby)
+      dy = ruby ? 3000 : 0
+
+      test "T02 Combine All (Union), #{engine}: three boxes" do |c, model|
+        tests.use_engine(ruby)
+        y = 0 + dy
         boxes = tests.setup(model) do
           [0, 5, 10].map { |x| tests.box(model.entities, x, y, 0, 10, 10, 10, tests.base_material(model)) }
         end
@@ -698,9 +785,9 @@ module SolidBatch
         c.note("faces of the result: #{tests.inner(result).grep(Sketchup::Face).length}")
       end
 
-      test 'T03 Combine All (Shell): three boxes' do |c, model|
-        next c.skip(NO_BOOLEANS) unless tests.pro?
-        y = 50
+      test "T03 Combine All (Shell), #{engine}: three boxes" do |c, model|
+        tests.use_engine(ruby)
+        y = 50 + dy
         boxes = tests.setup(model) do
           [0, 5, 10].map { |x| tests.box(model.entities, x, y, 0, 10, 10, 10, tests.base_material(model)) }
         end
@@ -715,9 +802,9 @@ module SolidBatch
         c.check(model.selection.to_a == [result], 'result selected')
       end
 
-      test 'T04 Combine All: subtract by color, native circles' do |c, model|
-        next c.skip(NO_BOOLEANS) unless tests.pro?
-        y = 100
+      test "T04 Combine All, #{engine}: subtract by color, native circles" do |c, model|
+        tests.use_engine(ruby)
+        y = 100 + dy
         base, tools = tests.setup(model) { tests.plate_with_holes(model, y) }
         tests.combine(model, :union, [base] + tools)
         c.check(tests.messages.empty?, 'no message', tests.messages.join(' / '))
@@ -740,10 +827,10 @@ module SolidBatch
         c.note("status bar: #{tests.status.last}")
       end
 
-      test 'T05 Combine All: one undo step' do |c, model|
-        next c.skip(NO_BOOLEANS) unless tests.pro?
+      test "T05 Combine All, #{engine}: one undo step" do |c, model|
         next c.skip('Sketchup.undo not available') unless Sketchup.respond_to?(:undo)
-        y = 150
+        tests.use_engine(ruby)
+        y = 150 + dy
         solids = tests.setup(model) do
           base, tools = tests.plate_with_holes(model, y)
           [base, tests.box(model.entities, 15, y, 0, 10, 10, 10, tests.base_material(model))] + tools
@@ -761,8 +848,30 @@ module SolidBatch
         end
       end
 
+      test "T08 Combine All, #{engine}: large object threshold" do |c, model|
+        tests.use_engine(ruby)
+        y = 300 + dy
+        base, tools = tests.setup(model) { tests.plate_with_holes(model, y) }
+        tests.force_option(:large_threshold) { 10 }
+        tests.force_option(:auto_repair_large) { 'No' }
+        tests.combine(model, :union, [base] + tools)
+        c.check(tests.messages.length == 1 && tests.messages.first.include?('restoration was skipped'),
+                'large result, auto-repair No: "skipped" message', tests.messages.join(' / '))
+        skipped = tests.groups_in(model, y).first
+        c.note("auto-repair No: #{skipped ? tests.arc_edges(tests.inner(skipped)) : 'no result'} edge(s) in native circles")
+        y = 350 + dy
+        base, tools = tests.setup(model) { tests.plate_with_holes(model, y) }
+        tests.force_option(:auto_repair_large) { 'Yes' }
+        tests.combine(model, :union, [base] + tools)
+        c.check(tests.messages.empty?, 'large result, auto-repair Yes: no message', tests.messages.join(' / '))
+        repaired = tests.groups_in(model, y).first
+        next c.check(false, 'auto-repair Yes: one result') unless repaired
+        arcs = tests.arc_edges(tests.inner(repaired))
+        c.check(arcs == 96, "auto-repair Yes: 96 edges in native circles (#{arcs})")
+      end
+      end # engines
+
       test 'T06 Combine All: messages (selection)' do |c, model|
-        next c.skip('SketchUp Make: PRO Only first (see T10)') unless tests.pro?
         y = 200
         one = tests.setup(model) { tests.box(model.entities, 0, y, 0, 10, 10, 10, tests.base_material(model)) }
         tests.combine(model, :union, [one])
@@ -794,28 +903,6 @@ module SolidBatch
         c.check(g.manifold? && g.entities.grep(Sketchup::Edge).length == edges, 'still a solid, same edges')
       end
 
-      test 'T08 Combine All: large object threshold' do |c, model|
-        next c.skip(NO_BOOLEANS) unless tests.pro?
-        y = 300
-        base, tools = tests.setup(model) { tests.plate_with_holes(model, y) }
-        tests.force_option(:large_threshold) { 10 }
-        tests.force_option(:auto_repair_large) { 'No' }
-        tests.combine(model, :union, [base] + tools)
-        c.check(tests.messages.length == 1 && tests.messages.first.include?('restoration was skipped'),
-                'large result, auto-repair No: "skipped" message', tests.messages.join(' / '))
-        skipped = tests.groups_in(model, y).first
-        c.note("auto-repair No: #{skipped ? tests.arc_edges(tests.inner(skipped)) : 'no result'} edge(s) in native circles")
-        y = 350
-        base, tools = tests.setup(model) { tests.plate_with_holes(model, y) }
-        tests.force_option(:auto_repair_large) { 'Yes' }
-        tests.combine(model, :union, [base] + tools)
-        c.check(tests.messages.empty?, 'large result, auto-repair Yes: no message', tests.messages.join(' / '))
-        repaired = tests.groups_in(model, y).first
-        next c.check(false, 'auto-repair Yes: one result') unless repaired
-        arcs = tests.arc_edges(tests.inner(repaired))
-        c.check(arcs == 96, "auto-repair Yes: 96 edges in native circles (#{arcs})")
-      end
-
       test 'T09 Set Repair Options: values saved, invalid values set to defaults' do |c, _model|
         tests.messages.clear
         tests.writes.clear
@@ -841,19 +928,46 @@ module SolidBatch
         c.check(tests.writes == expected, 'values saved', tests.writes.inspect)
       end
 
-      # In SketchUp Pro, SketchUp Make is simulated (Sketchup.is_pro? false).
-      test 'T10 Combine All without SketchUp Pro: PRO Only message' do |c, model|
-        c.note('SketchUp Pro: SketchUp Make simulated') if tests.pro?
+      # T10: one SketchUp edition check in the whole plugin, and one line,
+      # commented out by default, that sets Combine All to SketchUp Pro only.
+      # Uncommented (in a loaded copy of main.rb), without Pro: the message
+      # names that line and nothing is changed. In SketchUp Pro, SketchUp Make
+      # is simulated.
+      test 'T10 One edition check; the Pro only line (commented out by default)' do |c, model|
+        files = Dir.glob(File.join(tests.plugin_dir, '**', '*.rb')) + [File.join(SolidBatch::PLUGIN_DIR, 'solid_batch.rb')]
+        hits = []
+        texts = []
+        files.each do |f|
+          File.open(f, 'r:UTF-8', &:readlines).each_with_index do |l, k|
+            hits << "#{File.basename(f)}:#{k + 1}" if l.include?('is_pro?')
+            texts << "#{File.basename(f)}:#{k + 1}" if l =~ /requires SketchUp Pro|Pro only feature/i
+          end
+        end
+        c.check(hits.length == 1, "Sketchup.is_pro? tested once in the #{files.length} plugin files", hits.join(', '))
+        c.check(texts.empty?, 'no other Pro message', texts.join(', '))
+        lines = tests.main_lines
+        k = tests.guard_index(lines)
+        c.check(k && lines.count { |l| l.strip.sub(/\A#\s*/, '') == GUARD } == 1, 'one Pro only line')
+        next unless k
+        c.check(lines[k].strip.start_with?('#'), 'commented out by default: Combine All works without Pro',
+                lines[k].strip)
+        c.check(lines[k - 1].strip == PRO_TEST, 'just after the edition check', lines[k - 1].strip)
         y = 450
         base, tools = tests.setup(model) { tests.plate_with_holes(model, y) }
         solids = [base] + tools
-        tests.force_pro(false)
-        [:union, :outer_shell].each do |mode|
-          tests.combine(model, mode, solids)
-          c.check(tests.messages.length == 1 && tests.messages.first.start_with?('PRO Only'),
-                  "#{mode}: PRO Only message", tests.messages.join(' / '))
+        begin
+          line = tests.load_main_pro_only
+          tests.force_pro(false)
+          [:union, :outer_shell].each do |mode|
+            tests.combine(model, mode, solids)
+            want = "PRO Only vs. main.rb:#{line}"
+            c.check(tests.messages == [want], "#{mode}, line uncommented: #{want} (the Pro only line)",
+                    tests.messages.inspect)
+          end
+        ensure
+          tests.restore_main
+          tests.restore_pro
         end
-        tests.restore_pro
         c.check(solids.all?(&:valid?) && tests.groups_in(model, y).length == 3, 'nothing changed')
         c.check((base.volume - 4000).abs < 0.01, 'base unchanged', base.volume.round(3).to_s)
       end
@@ -986,13 +1100,13 @@ module SolidBatch
            [['subtract', tests.cylinders(m.entities, centers, Z_AXIS, 1, 3)]]]
         end]
       ]
+      tests.engines.each do |ruby|
       repair_cases.each_with_index do |(name, build), i|
-        test "T12 repair_holes: #{name}" do |c, model|
-          next c.skip(NO_BOOLEANS) unless tests.pro?
+        test "T12 repair_holes, #{tests.engine_label(ruby)}: #{name}" do |c, model|
           definitions = model.definitions.to_a
           acc, failed = tests.setup(model) do
-            base, steps = build.call(model, i * 250, 1000)
-            tests.run_steps(model, base, steps)
+            base, steps = build.call(model, i * 250, ruby ? 1500 : 1000)
+            tests.run_steps(model, base, steps, ruby)
           end
           # Native booleans with a tool of several solids leave unused
           # definitions (TempInstance#n): removed here when the API allows it.
@@ -1007,8 +1121,7 @@ module SolidBatch
           tests.compare_repair(c, model, acc, i.zero?)
         end
       end
-      # Also used by the local tests.
-      @repair_cases = repair_cases
+      end # engines
 
       # T14: SketchUp itself: aborting an operation chained (transparent) to
       # committed ones, as in Combine All, undoes the whole chain, and only it
@@ -1044,18 +1157,20 @@ module SolidBatch
         [4, :subtract, 'Subtract 3 of 3', :nil],
         [3, :subtract, 'Subtract 2 of 3', :raise]
       ]
+      tests.engines.each do |ruby|
       failures.each_with_index do |(failing, op, action, how), k|
-        test "T13 Combine All fails at step #{failing} of 4 (#{action}, #{how}): nothing changed" do |c, model|
-          next c.skip(NO_BOOLEANS) unless tests.pro?
-          y = 2100 + 60 * k
+        test "T13 Combine All, #{tests.engine_label(ruby)}, fails at step #{failing} of 4 (#{action}, #{how}): " \
+             'nothing changed' do |c, model|
+          tests.use_engine(ruby)
+          y = 2100 + 60 * k + (ruby ? 3000 : 0)
           solids = tests.setup(model) { tests.failing_case(model, y) }
           marker = tests.setup(model) { tests.box(model.entities, 60, y, 0, 5, 5, 5) }
           before = tests.band_state(model, y)
-          failed = tests.force_failure(solids, op, op == :union ? 1 : failing - 1, how)
+          failed = tests.force_failure(ruby, solids, op, op == :union ? 1 : failing - 1, how)
           begin
             tests.combine(model, :union, solids)
           ensure
-            tests.remove_failure(solids, op)
+            tests.remove_failure(ruby, solids, op)
           end
           message = tests.messages.first.to_s
           c.check(tests.messages.length == 1 && message.include?("failed at step #{failing} of 4: #{action},"),
@@ -1072,6 +1187,28 @@ module SolidBatch
             c.check(tests.band_state(model, y) == before && marker.valid?, 'still as before after a while')
           end
         end
+      end
+      end # engines
+
+      # T15: the Ruby engine modifies the base in place: a component base
+      # shared with another instance is made unique first, the other instance
+      # stays as it is (as with the native booleans).
+      test 'T15 Combine All, Ruby engine: component base shared with another instance' do |c, model|
+        tests.use_engine(true)
+        y = 1950
+        comp, other, tool = tests.setup(model) do
+          base = tests.box(model.entities, 0, y, 0, 10, 10, 10, tests.base_material(model)).to_component
+          copy = model.entities.add_instance(base.definition, Geom::Transformation.translation(Geom::Vector3d.new(0, 15, 0)))
+          [base, copy, tests.cylinder(model.entities, 5, y + 5, -2, 2, 14, tests.subtract_material(model))]
+        end
+        tests.combine(model, :union, [comp, tool])
+        c.check(tests.messages.empty?, 'no message', tests.messages.join(' / '))
+        c.check(other.valid? && (other.volume - 1000).abs < 0.01, 'the other instance is unchanged',
+                other.valid? ? other.volume.round(3).to_s : 'erased')
+        c.check(comp.valid? && comp.definition != other.definition, 'the base was made unique')
+        expected = 1000 - tests.prism_area(2, 24) * 10
+        c.check(comp.valid? && (comp.volume - expected).abs < 0.01, "hole subtracted (#{expected.round(3)})",
+                comp.valid? ? comp.volume.round(3).to_s : 'erased')
       end
 
       # Extra tests kept on this PC only (optional file, not in the repository).

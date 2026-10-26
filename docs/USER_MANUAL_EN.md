@@ -2,13 +2,13 @@
 
 ## Overview
 
-Solid Batch is a SketchUp Pro plugin that performs batch boolean operations on multiple solids in a single click. It uses SketchUp Pro's native boolean engine for reliable results.
+Solid Batch is a SketchUp plugin that performs batch boolean operations on multiple solids in a single click. In SketchUp Pro, it uses the native boolean engine; in SketchUp Make, which has none, a built-in Ruby engine.
 
 The plugin provides four commands accessible via the **Extensions > Solid Batch** menu and the **Solid Batch** toolbar.
 
 ## Requirements
 
-- **SketchUp Pro** 2017 or later
+- **SketchUp Pro** 2017 or later, or **SketchUp Make** 2017 (SketchUp Make is licensed by Trimble for non-commercial use only)
 - All objects must be **solid** groups or components (manifold geometry — every edge borders exactly 2 faces)
 
 ### Compatibility by version
@@ -17,7 +17,7 @@ The plugin provides four commands accessible via the **Extensions > Solid Batch*
 |---|---|
 | Pro 2017 or later | All the features: Combine All (Union, Shell), Set Subtract Color, Set Repair Options, automatic circle and arc restoration (native circles) |
 | Pro 2020.1 or later | Also the weld fallback: a circle that cannot be rebuilt natively is welded into one curve (before 2020.1 it stays as segments) |
-| Make, Free | Combine All shows "PRO Only" (native booleans are a SketchUp Pro feature) |
+| Make 2017 | All the features, with the built-in Ruby engine: slower on heavy parts, and Shell removes a solid enclosed in another one (the native Outer Shell of Pro keeps it) |
 
 ## Commands
 
@@ -154,8 +154,8 @@ A summary is shown in the status bar and, with the reason of each weld, in the R
 
 ## Troubleshooting
 
-### "PRO Only"
-You are using SketchUp Make or SketchUp Free. Combine All uses the native boolean methods, which are only available in SketchUp Pro. Nothing is changed in the model.
+### "PRO Only vs. main.rb:..."
+This copy of the plugin was set to SketchUp Pro only: the line named by the message, in `solid_batch/main.rb`, was uncommented. Nothing is changed in the model. To use Combine All in SketchUp Make, comment that line out again (put `#` at its start) and restart SketchUp.
 
 ### "Select at least 2 solid group(s) or component(s)"
 Your selection contains fewer than 2 valid solids. Check that:

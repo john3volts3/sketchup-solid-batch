@@ -193,7 +193,8 @@ module SolidBatch
     )
   end
 
-  # Combine All without SketchUp Pro.
+  # Combine All set to SketchUp Pro only (see do_combine_all_pro): the
+  # message names the line that sets it.
   def self.pro_only(line)
     UI.messagebox("PRO Only vs. #{File.basename(__FILE__)}:#{line}", MB_OK)
   end
@@ -210,8 +211,12 @@ module SolidBatch
   end
 
   def self.do_combine_all_pro(mode)
+    # The only SketchUp edition check of the plugin. Without SketchUp Pro,
+    # Combine All uses the Ruby engine (solid_operations.rb). To keep Combine
+    # All for SketchUp Pro only, uncomment the next line: without Pro, it then
+    # shows "PRO Only vs. main.rb:<line>".
     ruby = !Sketchup.is_pro?
-    return pro_only(__LINE__) if ruby
+    # return pro_only(__LINE__) if ruby
     solids = get_solids(2)
     return unless solids
 

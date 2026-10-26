@@ -57,14 +57,23 @@ foreach ($version in $Versions) {
 
     # The welcome screen blocks -RubyStartup until it is closed. 2021: it is
     # switched off for the run and switched back on after. 2017 (Make): no
-    # such setting, click its button by hand.
+    # such setting, click its button by hand. The preferences are UTF-8
+    # without BOM: read and written as such (Get-Content -Raw reads them as
+    # ANSI in Windows PowerShell 5.1, which re-encoded every accented
+    # character at each write); a file over 20 MB is not touched.
     $prefs = Join-Path $env:LOCALAPPDATA "SketchUp\SketchUp $version\SketchUp\PrivatePreferences.json"
+    $utf8 = New-Object System.Text.UTF8Encoding $false
     $welcomeOn = '("WelcomeDialog":\s*\{\s*"ShowOnStartup":\s*)true'
     $welcomeOff = '("WelcomeDialog":\s*\{\s*"ShowOnStartup":\s*)false'
     $welcomeSwitched = $false
-    if ((Test-Path $prefs) -and ((Get-Content $prefs -Raw) -match $welcomeOn)) {
-        [IO.File]::WriteAllText($prefs, ((Get-Content $prefs -Raw) -replace $welcomeOn, '${1}false'))
-        $welcomeSwitched = $true
+    if ((Test-Path $prefs) -and (Get-Item $prefs).Length -gt 20MB) {
+        Write-Host "  $prefs is over 20 MB: not touched (welcome screen left as it is)."
+    } elseif (Test-Path $prefs) {
+        $text = [IO.File]::ReadAllText($prefs, $utf8)
+        if ($text -match $welcomeOn) {
+            [IO.File]::WriteAllText($prefs, ($text -replace $welcomeOn, '${1}false'), $utf8)
+            $welcomeSwitched = $true
+        }
     }
 
     $report = Join-Path $results ("latest-{0}.txt" -f $majors[$version])
@@ -84,7 +93,12 @@ foreach ($version in $Versions) {
     if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
     Start-Sleep -Seconds 2
     if ($welcomeSwitched -and (Test-Path $prefs)) {
-        [IO.File]::WriteAllText($prefs, ((Get-Content $prefs -Raw) -replace $welcomeOff, '${1}true'))
+        try {
+            $text = [IO.File]::ReadAllText($prefs, $utf8)
+            [IO.File]::WriteAllText($prefs, ($text -replace $welcomeOff, '${1}true'), $utf8)
+        } catch {
+            Write-Host "  Could not switch the welcome screen of SketchUp $version back on: $($_.Exception.Message)"
+        }
     }
 
     if ($done) {
